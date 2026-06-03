@@ -1,3 +1,4 @@
+import 'express-async-errors'; // route async throws → error handler (never crash)
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'node:http';
@@ -37,11 +38,20 @@ app.all('/graphql', graphqlHandler);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec as object, { customSiteTitle: 'robot-id.eth API' }));
 app.get('/openapi.json', (_req, res) => res.json(openapiSpec));
 
-// error handler
+// error handler — async route throws land here (via express-async-errors)
 app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
+  // a missing contract address is a configuration issue, not an internal fault
+  if (/address not configured/i.test(err.message)) {
+    res.status(503).json({ error: 'Service not configured', detail: err.message });
+    return;
+  }
   res.status(500).json({ error: 'internal error', detail: err.message });
 });
+
+// last-resort safety nets so a stray rejection can never take the server down
+process.on('unhandledRejection', (reason) => console.error('[unhandledRejection]', reason));
+process.on('uncaughtException', (err) => console.error('[uncaughtException]', err));
 
 const server = createServer(app);
 attachWebSocket(server);
