@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "installCommand": "cd .. && npm ci --include=dev --workspaces --include-workspace-root",
-  "buildCommand": "npx --no-install next build",
+  "installCommand": "[ -f package-lock.json ] || cd ..; npm ci --include=dev --workspaces --include-workspace-root",
+  "buildCommand": "[ -d frontend ] && cd frontend; npx --no-install next build",
   "outputDirectory": "out"
 }
