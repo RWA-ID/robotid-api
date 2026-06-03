@@ -61,6 +61,13 @@ server.listen(config.port, () => {
   console.log(`  Swagger  → http://localhost:${config.port}/docs`);
   console.log(`  GraphQL  → http://localhost:${config.port}/graphql`);
   console.log(`  WebSocket→ ws://localhost:${config.port}/ws`);
+  // report which contract addresses are configured (helps diagnose 503s)
+  const entries = Object.entries(config.addresses);
+  const set = entries.filter(([, v]) => v).map(([k]) => k);
+  const missing = entries.filter(([, v]) => !v).map(([k]) => k);
+  console.log(`  contracts configured: ${set.join(', ') || '(none)'}`);
+  if (missing.length) console.log(`  ⚠ contracts MISSING (endpoints will 503): ${missing.join(', ')}`);
+  console.log(`  RPC: ${config.rpcUrl.replace(/\/v2\/.*/, '/v2/***')} · chainId ${config.chainId}`);
   startSubscriptionWatcher();
 });
 

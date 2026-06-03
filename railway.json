@@ -4,10 +4,10 @@
     "builder": "NIXPACKS",
     "watchPatterns": [
       "api/**",
-      "nixpacks.toml",
-      "railway.json",
-      "package.json",
-      "package-lock.json"
+      "/nixpacks.toml",
+      "/railway.json",
+      "/package.json",
+      "/package-lock.json"
     ]
   },
   "deploy": {
