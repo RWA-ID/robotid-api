@@ -1,6 +1,7 @@
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 1);
 export const REOWN_PROJECT_ID = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ?? '';
-export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.robot-id.eth';
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? 'https://robot-idapi-production.up.railway.app';
 
 export const SUBSCRIPTION_ADDRESS = (process.env.NEXT_PUBLIC_SUBSCRIPTION_ADDRESS ??
   '0x0000000000000000000000000000000000000000') as `0x${string}`;
