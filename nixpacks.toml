@@ -1,0 +1,14 @@
+# Explicit Nixpacks phases for the monorepo API deploy.
+# Avoids the default double-`npm ci` (install phase + buildCommand) that
+# collides on node_modules/.cache → EBUSY. `--include=dev` guarantees
+# TypeScript is present for the api build even if Railway sets production.
+
+[phases.install]
+cmds = ["npm ci --include=dev"]
+
+[phases.build]
+dependsOn = ["install"]
+cmds = ["npm --workspace api run build"]
+
+[start]
+cmd = "node api/dist/index.js"
