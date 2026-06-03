@@ -28,6 +28,7 @@ export const TIERS = [
     requests: '1,000,000 / mo',
     rate: '300 / min',
     perks: ['✓ *.mfr namespace', 'Basic intent adapters', 'REST · GraphQL · WS'],
+    featured: false,
   },
   {
     idx: 1,
@@ -47,5 +48,6 @@ export const TIERS = [
     requests: 'Unlimited',
     rate: '5,000 / min',
     perks: ['✓ + multi-chain', 'White-label', 'Dedicated SLA'],
+    featured: false,
   },
 ] as const;
