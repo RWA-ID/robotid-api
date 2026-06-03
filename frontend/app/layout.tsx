@@ -26,10 +26,14 @@ function Nav() {
           <a href="/#modules">Modules</a>
           <a href="/docs">Docs</a>
           <a href="/#pricing">Pricing</a>
-          <a href="https://github.com/RWA-ID/robot-id-api" target="_blank" rel="noreferrer">
+          <a href="https://github.com/RWA-ID/robotid-api" target="_blank" rel="noreferrer">
             GitHub ↗
           </a>
-          <a href="/subscribe" className="btn steel" style={{ padding: '8px 14px' }}>
+          <a
+            href="/subscribe"
+            className="btn steel"
+            style={{ padding: '8px 14px', color: 'var(--cream)' }}
+          >
             Get a key
           </a>
         </div>
