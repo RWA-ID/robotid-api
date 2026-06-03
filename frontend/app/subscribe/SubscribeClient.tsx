@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useAccount, useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
-import { ConnectButton } from '@/components/ConnectButton';
-import { TIERS, SUBSCRIPTION_ADDRESS, USDC_ADDRESS, API_URL } from '@/lib/config';
+import { WalletButton } from '@/components/WalletButton';
+import { TIERS, SUBSCRIPTION_ADDRESS, USDC_ADDRESS, API_URL, REOWN_PROJECT_ID } from '@/lib/config';
 import { SUBSCRIPTION_ABI, ERC20_ABI } from '@/lib/contracts';
 
 type Step = 'idle' | 'approving' | 'subscribing' | 'provisioning' | 'done';
@@ -96,7 +96,15 @@ export default function Subscribe() {
         </p>
 
         <div className="connect-row">
-          <ConnectButton />
+          <WalletButton />
+          {!isConnected && REOWN_PROJECT_ID && (
+            <span className="connect-note">↳ opens the Reown wallet modal</span>
+          )}
+          {!REOWN_PROJECT_ID && (
+            <span className="connect-note" style={{ color: 'var(--signal-deep)' }}>
+              ↳ set NEXT_PUBLIC_REOWN_PROJECT_ID (Vercel env) to enable
+            </span>
+          )}
           {active && (
             <span className="connect-note" style={{ color: 'var(--ok)' }}>✓ this wallet has an active subscription</span>
           )}

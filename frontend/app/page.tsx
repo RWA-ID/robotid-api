@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { LiveRibbon } from '@/components/LiveRibbon';
 import { IntentConsole } from '@/components/IntentConsole';
-import { ConnectButton } from '@/components/ConnectButton';
 import { SiteNav } from '@/components/SiteNav';
 import {
   Datamatrix, Arrow, Check, Ext,
@@ -400,8 +399,8 @@ function Pricing() {
           <span className="mono">mfr.robot-id.eth</span> namespace.
         </p>
         <div className="connect-row">
-          <ConnectButton />
-          <span className="connect-note">↳ live <code>&lt;appkit-button /&gt;</code> + USDC subscribe flow</span>
+          <a href="/subscribe" className="btn btn-primary">Connect wallet · subscribe <Arrow /></a>
+          <span className="connect-note">↳ connect, approve USDC, and subscribe on the key page</span>
         </div>
         <div className="pricing">
           {TIERS.map((t) => (
