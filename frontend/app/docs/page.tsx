@@ -1,10 +1,13 @@
 import { API_URL } from '@/lib/config';
+import { SiteNav } from '@/components/SiteNav';
 
 export const metadata = { title: 'Docs — robot-id.eth' };
 
 export default function Docs() {
   return (
-    <main className="wrap">
+    <main>
+      <SiteNav />
+      <div className="wrap">
       <div className="doc">
         <nav>
           <a href="#overview">Overview</a>
@@ -181,6 +184,17 @@ const ack = await plugin.handleUtterance(
           <p>RobotIdentity · AgentWallet · IntentRouter · CapabilityRegistry · OTAVerifier · MerkleBatchOracle · Subscription — all source-verified. See the live table on the <a href="/#contracts">landing page</a>.</p>
         </article>
       </div>
+      </div>
+      <footer className="footer">
+        <div className="wrap row">
+          <div className="meta">
+            <span>Built on Ethereum</span><span className="sep">·</span>
+            <span>Powered by ENS</span><span className="sep">·</span>
+            <span>MIT Licensed</span>
+          </div>
+          <div className="brand-f">Robot&nbsp;<b>ID</b></div>
+        </div>
+      </footer>
     </main>
   );
 }
