@@ -7,6 +7,7 @@ import {
   keccak256,
   toHex,
   decodeFunctionData,
+  decodeAbiParameters,
   encodeAbiParameters,
   encodePacked,
   parseAbiParameters,
@@ -54,6 +55,33 @@ const ADDR_ABI = [
 ] as const;
 
 const ZERO = '0x0000000000000000000000000000000000000000' as Hex;
+const EMPTY = '0x' as Hex;
+const ADDR_SELECTOR = '0x3b3b57de'; // addr(bytes32)
+const RESOLVE_SELECTOR = '0x9061b923'; // resolve(bytes,bytes)
+
+/**
+ * The OffchainLookup callData arrives in one of two wire shapes (see the
+ * cash-app.eth CCIP footgun): (A) a raw `abi.encode(name, data)` tuple with NO
+ * selector — what our resolver emits and wallets re-send verbatim — or (B) a
+ * full `resolve(bytes,bytes)` function call prefixed with 0x9061b923, which the
+ * ENS/NameStone spec tooling constructs independently. Sniff the first 4 bytes
+ * and decode accordingly; a gateway that only handles one fails the other with
+ * a cryptic ABI error surfaced upstream as "HTTP request failed".
+ */
+function decodeCallData(callData: Hex): { name: string; inner: Hex } {
+  let dnsName: Hex;
+  let inner: Hex;
+  if (callData.slice(0, 10).toLowerCase() === RESOLVE_SELECTOR) {
+    const d = decodeFunctionData({ abi: RESOLVE_ABI, data: callData });
+    [dnsName, inner] = d.args as [Hex, Hex];
+  } else {
+    [dnsName, inner] = decodeAbiParameters(
+      [{ type: 'bytes' }, { type: 'bytes' }],
+      callData,
+    ) as [Hex, Hex];
+  }
+  return { name: decodeDnsName(dnsName), inner };
+}
 
 async function resolveHolder(name: string): Promise<{ addr: Hex; tokenId: bigint | null; uri?: string }> {
   const parsed = parseName(name, PARENT);
@@ -118,18 +146,19 @@ app.get('/:sender/:data', async (req, res) => {
     const sender = req.params.sender as Hex;
     const data = (req.params.data.replace(/\.json$/, '')) as Hex;
 
-    const { args } = decodeFunctionData({ abi: RESOLVE_ABI, data });
-    const [dnsName, innerData] = args as [Hex, Hex];
-    const name = decodeDnsName(dnsName);
+    const { name, inner } = decodeCallData(data);
 
-    // we only answer addr(node); other records resolve to empty
-    let result: Hex = encodeAbiParameters([{ type: 'address' }], [ZERO]);
-    try {
-      decodeFunctionData({ abi: ADDR_ABI, data: innerData });
-      const r = await resolveHolder(name);
-      result = encodeAbiParameters([{ type: 'address' }], [r.addr]);
-    } catch {
-      /* unsupported record → empty */
+    // We only answer addr(node); any other record (text, contenthash, …) MUST
+    // resolve to empty bytes per ENSIP — never crash on an unknown selector.
+    let result: Hex = EMPTY;
+    if (inner.slice(0, 10).toLowerCase() === ADDR_SELECTOR) {
+      try {
+        decodeFunctionData({ abi: ADDR_ABI, data: inner });
+        const r = await resolveHolder(name);
+        result = encodeAbiParameters([{ type: 'address' }], [r.addr]);
+      } catch {
+        result = EMPTY;
+      }
     }
 
     const signed = await signResult(sender, result, data);

@@ -45,11 +45,18 @@ export async function provisionNamespace(
   const parentNode = namehash(config.ensParent);
   const fullName = oemName(slug);
 
+  // The OEM node must carry the CCIP wildcard resolver, NOT the PublicResolver:
+  // unit names (<serial>.<oem>.robot-id.eth) are virtual and resolve by walking
+  // up to this node's resolver (ENSIP-10). A PublicResolver here would leave
+  // every unit name unresolvable. Falls back to PublicResolver only if the
+  // wildcard resolver isn't configured yet.
+  const resolver = config.addresses.resolver ?? config.publicResolver;
+
   const hash = await adminWallet.writeContract({
     address: config.nameWrapper,
     abi: NAME_WRAPPER_ABI,
     functionName: 'setSubnodeRecord',
-    args: [parentNode, slug, subscriber, config.publicResolver, 0n, 0, 2n ** 64n - 1n],
+    args: [parentNode, slug, subscriber, resolver, 0n, 0, 2n ** 64n - 1n],
   });
   await publicClient.waitForTransactionReceipt({ hash });
   console.log(`[registrar] provisioned ${fullName} for ${subscriber} (${tier}) tx=${hash}`);

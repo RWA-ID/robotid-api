@@ -12,6 +12,7 @@ import { capabilityRouter } from './routes/capability.js';
 import { intentRouter } from './routes/intent.js';
 import { otaRouter } from './routes/ota.js';
 import { subscriptionRouter } from './routes/subscription.js';
+import { ccipRouter } from './routes/ccip.js';
 import { graphqlHandler } from './graphql.js';
 import { attachWebSocket } from './ws/server.js';
 import { startSubscriptionWatcher } from './listeners/subscription-watcher.js';
@@ -33,6 +34,7 @@ app.use('/api/v1/capability', capabilityRouter);
 app.use('/api/v1/intent', intentRouter);
 app.use('/api/v1/ota', otaRouter);
 app.use('/api/v1/subscription', subscriptionRouter);
+app.use('/ccip', ccipRouter); // EIP-3668 CCIP-Read gateway for *.robot-id.eth
 
 app.all('/graphql', graphqlHandler);
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openapiSpec as object, { customSiteTitle: 'robot-id.eth API' }));

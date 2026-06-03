@@ -11,6 +11,7 @@ export const config = {
   chainId: Number(process.env.CHAIN_ID ?? 1),
   rpcUrl: req('RPC_URL', 'http://127.0.0.1:8545'),
   adminPrivateKey: process.env.ADMIN_PRIVATE_KEY as `0x${string}` | undefined,
+  gatewaySignerKey: process.env.GATEWAY_SIGNER_KEY as `0x${string}` | undefined,
   pinataJwt: process.env.PINATA_JWT ?? '',
   ensParent: process.env.ENS_PARENT ?? 'robot-id.eth',
   nameWrapper: (process.env.NAMEWRAPPER_ADDRESS ??
@@ -27,6 +28,7 @@ export const config = {
     otaVerifier: process.env.OTA_VERIFIER_ADDRESS as `0x${string}` | undefined,
     merkleOracle: process.env.MERKLE_ORACLE_ADDRESS as `0x${string}` | undefined,
     subscription: process.env.SUBSCRIPTION_ADDRESS as `0x${string}` | undefined,
+    resolver: process.env.RESOLVER_ADDRESS as `0x${string}` | undefined, // CCIP wildcard resolver
   },
 };
 
