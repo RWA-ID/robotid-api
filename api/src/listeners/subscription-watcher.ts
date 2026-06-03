@@ -33,8 +33,12 @@ export function startSubscriptionWatcher(): () => void {
         };
         const tierName = TIER_NAMES[Number(tier)] ?? 'SmallManufacturer';
         const rec = store.issueKey(subscriber, tierName);
-        console.log(`[watcher] Subscribed ${subscriber} tier=${tierName} expiry=${expiry} → key issued`);
-        void provisionNamespace(subscriber, tierName).catch((e) =>
+        const chosenSlug = store.slugForSubscriber(subscriber); // OEM pick at checkout, if any
+        console.log(
+          `[watcher] Subscribed ${subscriber} tier=${tierName} expiry=${expiry} → key issued` +
+            (chosenSlug ? ` slug=${chosenSlug}` : ' (no slug reserved — address fallback)'),
+        );
+        void provisionNamespace(subscriber, tierName, chosenSlug).catch((e) =>
           console.error('[watcher] namespace provisioning failed:', e?.message ?? e),
         );
         void rec;

@@ -25,16 +25,23 @@ const NAME_WRAPPER_ABI = [
 /**
  * Provision an OEM namespace (mfr.robot-id.eth) as a deliverable of an active
  * subscription. Requires ADMIN_PRIVATE_KEY (the registrar must be a NameWrapper
- * operator on the parent — see script/ApproveWrapper.s.sol). Derives a label
- * from the subscriber address; in production the OEM picks the slug at checkout.
+ * operator on the parent — see script/ApproveWrapper.s.sol).
+ *
+ * `chosenSlug` is the OEM's pick reserved at checkout (validated/availability-
+ * checked at reservation time). When omitted, we fall back to a deterministic
+ * address-derived label so a paying OEM always gets *a* namespace even if they
+ * skipped slug selection.
  */
-export async function provisionNamespace(subscriber: Hex, tier: TierName): Promise<string | null> {
+export async function provisionNamespace(
+  subscriber: Hex,
+  tier: TierName,
+  chosenSlug?: string,
+): Promise<string | null> {
   if (!adminWallet) {
     console.warn('[registrar] ADMIN_PRIVATE_KEY unset — skipping namespace provisioning');
     return null;
   }
-  // default slug from address; override via dApp by passing a chosen slug
-  const slug = normalizeSlug(`oem-${subscriber.slice(2, 10)}`);
+  const slug = normalizeSlug(chosenSlug ?? `oem-${subscriber.slice(2, 10)}`);
   const parentNode = namehash(config.ensParent);
   const fullName = oemName(slug);
 

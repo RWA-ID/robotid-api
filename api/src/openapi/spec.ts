@@ -96,7 +96,7 @@ export const openapiSpec = {
         required: ['to', 'serialNumber', 'manufacturer', 'model'],
         properties: {
           to: Address,
-          serialNumber: { type: 'string', example: 'SPOT-0001' },
+          serialNumber: { type: 'string', example: 'SPOT-0001', description: 'Normalized (lowercased, dash-separated) before hashing, so the on-chain serialHash matches the ENS unit label resolved by the CCIP gateway.' },
           manufacturer: { type: 'string', example: 'Boston Dynamics' },
           model: { type: 'string', example: 'Spot' },
           capabilityClass: { type: 'string', example: 'quadruped-inspection' },
@@ -116,6 +116,7 @@ export const openapiSpec = {
           serials: {
             type: 'array',
             maxItems: 100000,
+            description: 'Serials are normalized before hashing; two that normalize to the same slug are rejected with 422.',
             items: {
               type: 'object',
               required: ['serialNumber', 'owner'],
@@ -165,6 +166,17 @@ export const openapiSpec = {
           expiryISO: { type: 'string' },
         },
       },
+      NamespaceCheck: {
+        type: 'object',
+        description: 'Availability of an OEM-chosen namespace slug. `slug` is the normalized form actually checked.',
+        properties: {
+          slug: { type: 'string', example: 'boston-dynamics' },
+          valid: { type: 'boolean', description: 'Passes normalization, length (3–63), and the reserved-word blocklist' },
+          available: { type: 'boolean', description: 'Not already reserved by another wallet (first-come, first-served)' },
+          name: { type: 'string', nullable: true, example: 'boston-dynamics.robot-id.eth' },
+          reason: { type: 'string', nullable: true, description: 'Why the slug is invalid, when `valid` is false' },
+        },
+      },
     },
     responses: {
       Unauthorized: { description: 'Missing or invalid API key', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
@@ -209,6 +221,36 @@ export const openapiSpec = {
         },
       },
     },
+    '/auth/namespace/{slug}': {
+      get: {
+        tags: ['Auth'], summary: 'Check OEM namespace availability (public)',
+        description: [
+          'Live availability check for an OEM-chosen namespace, used by the checkout UI as the OEM types.',
+          'The slug is normalized server-side (lowercase, dash-separated); the returned `slug` is the',
+          'normalized form. Namespaces are **first-come, first-served** — there is no brand-reservation list.',
+        ].join(' '),
+        parameters: [{ name: 'slug', in: 'path', required: true, schema: { type: 'string', example: 'boston-dynamics' } }],
+        responses: { '200': { description: 'Availability', content: { 'application/json': { schema: { $ref: '#/components/schemas/NamespaceCheck' } } } } },
+      },
+    },
+    '/auth/namespace/reserve': {
+      post: {
+        tags: ['Auth'], summary: 'Reserve an OEM namespace at checkout (SIWE)',
+        description: [
+          'Proves wallet control via a signed message and reserves the chosen slug for that wallet.',
+          'No active subscription is required (checkout happens before the tx confirms); the reservation',
+          'is consumed by the on-chain `Subscribed` watcher, which provisions `<slug>.robot-id.eth` to the',
+          'wallet on payment. Re-reserving a different slug from the same wallet releases the previous one.',
+        ].join(' '),
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['address', 'message', 'signature', 'slug'], properties: { address: Address, message: { type: 'string', example: 'Reserve boston-dynamics.robot-id.eth for 0x… on robot-id.eth' }, signature: { type: 'string', example: '0x…' }, slug: { type: 'string', example: 'boston-dynamics' } } } } } },
+        responses: {
+          '200': { description: 'Reserved', content: { 'application/json': { example: { reserved: true, slug: 'boston-dynamics', name: 'boston-dynamics.robot-id.eth', subscriber: '0x…' } } } },
+          '400': { description: 'Invalid signature or slug', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+          '401': { $ref: '#/components/responses/Unauthorized' },
+          '409': { description: 'Slug already reserved by another wallet', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
+        },
+      },
+    },
     '/api/v1/robots/{tokenId}': {
       get: {
         tags: ['Robots'], summary: 'Live identity + current owner (read straight from chain)',
@@ -224,7 +266,7 @@ export const openapiSpec = {
         tags: ['Robots'], summary: 'Register a single unit → unsigned tx', security: [{ apiKey: [] }],
         requestBody: { required: true, content: { 'application/json': { schema: { $ref: '#/components/schemas/RegisterRequest' } } } },
         responses: {
-          '200': { description: 'Unsigned registerRobot tx + pinned tokenURI', content: { 'application/json': { schema: { type: 'object', properties: { unsignedTx: { $ref: '#/components/schemas/UnsignedTx' }, serialHash: Bytes32, tokenURI: { type: 'string' } } } } } },
+          '200': { description: 'Unsigned registerRobot tx + pinned tokenURI', content: { 'application/json': { schema: { type: 'object', properties: { unsignedTx: { $ref: '#/components/schemas/UnsignedTx' }, serialHash: Bytes32, serialSlug: { type: 'string', description: 'Normalized serial label used in the ENS unit name', example: 'spot-0001' }, name: { type: 'string', nullable: true, description: 'Resolvable unit name (null until the OEM has reserved a namespace)', example: 'spot-0001.boston-dynamics.robot-id.eth' }, tokenURI: { type: 'string' } } } } } },
           '400': { description: 'Bad request', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '401': { $ref: '#/components/responses/Unauthorized' },
           '402': { $ref: '#/components/responses/PaymentRequired' },
@@ -240,6 +282,7 @@ export const openapiSpec = {
           '400': { description: 'Empty or oversized batch', content: { 'application/json': { schema: { $ref: '#/components/schemas/Error' } } } },
           '401': { $ref: '#/components/responses/Unauthorized' },
           '402': { $ref: '#/components/responses/PaymentRequired' },
+          '422': { description: 'Serials collide after normalization (would map to the same ENS unit name)', content: { 'application/json': { example: { error: 'serials collide after normalization', collisions: [{ slug: 'go2-0001', serials: ['GO2-0001', 'go2_0001'] }] } } } },
         },
       },
     },

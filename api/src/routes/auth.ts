@@ -5,6 +5,7 @@ import { publicClient } from '../lib/viem.js';
 import { SUBSCRIPTION_ABI, TIER_NAMES } from '../lib/contracts.js';
 import { isSubscriptionActive, tierOf, requireApiKey, TIER_LIMITS, type AuthedRequest } from '../lib/auth.js';
 import { store } from '../lib/store.js';
+import { checkSlug, oemName } from '../lib/ens.js';
 
 export const authRouter = Router();
 
@@ -64,6 +65,56 @@ authRouter.post('/keys/wallet', async (req, res) => {
   const tier = await tierOf(recovered);
   const rec = store.issueKey(recovered, tier);
   res.json({ apiKey: rec.key, tier: rec.tier, subscriber: rec.subscriber });
+});
+
+/**
+ * GET /auth/namespace/:slug — availability check for an OEM-chosen namespace
+ * (public, used by the checkout UI as the OEM types). Returns the normalized
+ * slug, whether it is valid + free, and the resulting fully-qualified name.
+ */
+authRouter.get('/namespace/:slug', (req, res) => {
+  const check = checkSlug(req.params.slug);
+  if (!check.ok) {
+    return res.json({ slug: check.slug, valid: false, available: false, reason: check.reason });
+  }
+  const holder = store.subscriberForSlug(check.slug);
+  res.json({
+    slug: check.slug,
+    valid: true,
+    available: !holder,
+    name: oemName(check.slug),
+  });
+});
+
+/**
+ * POST /auth/namespace/reserve — SIWE-style: the OEM proves wallet control and
+ * reserves their chosen slug at checkout. The reservation is consumed by the
+ * Subscribed watcher, which provisions `<slug>.robot-id.eth` to this wallet on
+ * payment. No active subscription is required to reserve (checkout happens
+ * before the tx confirms), but provisioning only fires on a paid Subscribed.
+ */
+authRouter.post('/namespace/reserve', async (req, res) => {
+  const { address, message, signature, slug } = req.body ?? {};
+  if (!address || !message || !signature || !slug) {
+    return res.status(400).json({ error: 'address, message, signature, slug required' });
+  }
+  let recovered: Hex;
+  try {
+    recovered = await recoverMessageAddress({ message, signature });
+  } catch {
+    return res.status(400).json({ error: 'invalid signature' });
+  }
+  if (recovered.toLowerCase() !== String(address).toLowerCase()) {
+    return res.status(401).json({ error: 'signature does not match address' });
+  }
+
+  const check = checkSlug(slug);
+  if (!check.ok) return res.status(400).json({ error: 'invalid slug', reason: check.reason, slug: check.slug });
+
+  if (!store.reserveSlug(recovered, check.slug)) {
+    return res.status(409).json({ error: 'slug already reserved', slug: check.slug });
+  }
+  res.json({ reserved: true, slug: check.slug, name: oemName(check.slug), subscriber: recovered });
 });
 
 // GET /auth/keys/info (auth) — tier, limits, usage, expiry

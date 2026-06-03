@@ -15,6 +15,7 @@ export default function Docs() {
           <a href="#auth">Authentication</a>
           <div className="grp">Concepts</div>
           <a href="#identity">Robot Identity</a>
+          <a href="#namespaces">Namespaces</a>
           <a href="#batches">Merkle Batches</a>
           <a href="#capability">Capability Registry</a>
           <a href="#intent">Intent Routing</a>
@@ -55,9 +56,10 @@ const caps  = await client.capability.get(1n)`}</code></pre>
           <h2 id="auth">Authentication</h2>
           <p>
             Subscription-gated, SIWE via Reown AppKit. Connect a wallet on{' '}
-            <a href="/subscribe">/subscribe</a>, approve USDC, and call{' '}
-            <code>Subscription.subscribe(tier)</code>. The on-chain <code>Subscribed</code> event
-            triggers API-key minting + ENS namespace provisioning. Retrieve your key via a
+            <a href="/subscribe">/subscribe</a>, optionally <a href="#namespaces">reserve your
+            namespace</a>, approve USDC, and call <code>Subscription.subscribe(tier)</code>. The
+            on-chain <code>Subscribed</code> event triggers API-key minting + provisioning of the
+            namespace you reserved (or an address-derived default). Retrieve your key via a
             SIWE-authenticated <code>GET /auth/keys/info</code>. Every request re-checks{' '}
             <code>isActive</code>; expired subscriptions get <code>402 Payment Required</code>.
           </p>
@@ -65,11 +67,34 @@ const caps  = await client.capability.get(1n)`}</code></pre>
           <h2 id="identity">Robot Identity</h2>
           <p>
             ERC-721 + ERC-5192 (per-token soulbound) + ERC-2981 royalties. Each unit&rsquo;s{' '}
-            <code>serialHash</code> is <code>keccak256(serialNumber)</code> — privacy-preserving but
-            verifiable. The ENS name <code>SN-X.mfr.robot-id.eth</code> always resolves to the
-            current NFT holder via the CCIP-Read gateway. No registration fee — minting costs gas
-            only.
+            <code>serialHash</code> is <code>keccak256(normalize(serialNumber))</code> —
+            privacy-preserving but verifiable, and normalized so it matches the ENS label the
+            gateway resolves. The ENS name <code>&lt;serial&gt;.&lt;mfr&gt;.robot-id.eth</code> always
+            resolves to the current NFT holder via the CCIP-Read gateway. No registration fee —
+            minting costs gas only.
           </p>
+
+          <h2 id="namespaces">Namespaces</h2>
+          <p>
+            An OEM picks its own namespace at checkout — e.g.{' '}
+            <code>boston-dynamics.robot-id.eth</code> — and every one of its units resolves beneath
+            it: <code>spot-0001.boston-dynamics.robot-id.eth</code>. Names are{' '}
+            <b>first-come, first-served</b>; there is no brand-reservation list. Slugs are normalized
+            (lowercase, dash-separated, 3–63 chars) and a small set of protocol words is reserved.
+          </p>
+          <p>
+            Only the <b>OEM namespace</b> is written on-chain (one <code>setSubnodeRecord</code>,
+            owned by the OEM wallet). The unit names below it are <b>virtual</b> — resolved by the
+            CCIP-Read gateway with zero ENS writes — so a single subscription scales to 100,000+
+            identities with one namespace write and one Merkle root.
+          </p>
+          <pre><code>{`GET  /auth/namespace/boston-dynamics        // availability (public)
+→ { slug, valid, available, name }
+
+POST /auth/namespace/reserve                // SIWE, free, at checkout
+{ address, message, signature, slug:"boston-dynamics" }
+→ { reserved:true, name:"boston-dynamics.robot-id.eth" }
+// consumed by the Subscribed watcher → provisioned on payment`}</code></pre>
 
           <h2 id="batches">Merkle Batches (OEM)</h2>
           <p>

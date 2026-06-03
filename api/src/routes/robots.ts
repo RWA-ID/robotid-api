@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { encodeFunctionData, keccak256, toHex, type Hex } from 'viem';
+import { encodeFunctionData, type Hex } from 'viem';
 import { requireAddress } from '../lib/config.js';
 import { publicClient } from '../lib/viem.js';
 import { ROBOT_IDENTITY_ABI } from '../lib/contracts.js';
@@ -7,6 +7,7 @@ import { requireApiKey, type AuthedRequest } from '../lib/auth.js';
 import { pinJSON } from '../lib/pinata.js';
 import { buildTree, batchIdOf, type BatchUnit } from '../lib/merkle.js';
 import { store, type BatchRecord } from '../lib/store.js';
+import { serialHashOf, normalizeSlug, unitName } from '../lib/ens.js';
 import { publish } from '../ws/server.js';
 
 export const robotsRouter = Router();
@@ -47,7 +48,8 @@ robotsRouter.post('/', requireApiKey(), async (req: AuthedRequest, res) => {
   if (!to || !serialNumber || !manufacturer || !model) {
     return res.status(400).json({ error: 'to, serialNumber, manufacturer, model required' });
   }
-  const serialHash = keccak256(toHex(serialNumber));
+  const serialSlug = normalizeSlug(serialNumber);
+  const serialHash = serialHashOf(serialNumber);
   const tokenURI = await pinJSON(`robot-${serialHash.slice(2, 10)}`, {
     manufacturer, model, capabilityClass, firmwareVersion, ...profile,
   });
@@ -58,8 +60,12 @@ robotsRouter.post('/', requireApiKey(), async (req: AuthedRequest, res) => {
     args: [to, serialHash, manufacturer, model, capabilityClass ?? '', Number(firmwareVersion), Boolean(locked), tokenURI],
   });
 
+  // Preview the resolvable ENS name using the OEM's reserved namespace slug.
+  const mfrSlug = store.slugForSubscriber(req.apiKey!.subscriber);
+  const name = mfrSlug ? unitName(serialSlug, mfrSlug) : null;
+
   publish('robots', 'register.prepared', { to, manufacturer, model, serialHash });
-  res.json({ unsignedTx: { to: requireAddress('robotIdentity'), data, value: '0x0' }, serialHash, tokenURI });
+  res.json({ unsignedTx: { to: requireAddress('robotIdentity'), data, value: '0x0' }, serialHash, serialSlug, name, tokenURI });
 });
 
 /**
@@ -76,8 +82,23 @@ robotsRouter.post('/batch/preauthorize', requireApiKey(), async (req: AuthedRequ
   }
 
   const oem = req.apiKey!.subscriber;
+
+  // Reject serials that normalize to the same slug — they would hash to one
+  // serialHash and resolve to a single, ambiguous ENS unit name.
+  const seen = new Map<string, string>(); // slug → first raw serial
+  const collisions: { slug: string; serials: string[] }[] = [];
+  for (const s of serials as { serialNumber: string }[]) {
+    const slug = normalizeSlug(s.serialNumber);
+    const first = seen.get(slug);
+    if (first === undefined) seen.set(slug, s.serialNumber);
+    else collisions.push({ slug, serials: [first, s.serialNumber] });
+  }
+  if (collisions.length > 0) {
+    return res.status(422).json({ error: 'serials collide after normalization', collisions });
+  }
+
   const units: BatchUnit[] = serials.map((s: { serialNumber: string; owner: Hex }) => ({
-    serialHash: keccak256(toHex(s.serialNumber)),
+    serialHash: serialHashOf(s.serialNumber),
     owner: s.owner,
     locked: Boolean(locked),
   }));
