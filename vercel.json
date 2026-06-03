@@ -3,5 +3,5 @@
   "framework": null,
   "installCommand": "[ -f package-lock.json ] || cd ..; npm ci --include=dev --workspaces --include-workspace-root",
   "buildCommand": "CFG=\"$(find /vercel -maxdepth 6 -name next.config.js -not -path '*/node_modules/*' 2>/dev/null | head -1)\"; echo \"Next config at: $CFG\"; cd \"$(dirname \"$CFG\")\" && npx --no-install next build",
-  "outputDirectory": "out"
+  "outputDirectory": "frontend/out"
 }
