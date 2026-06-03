@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "[ -f package-lock.json ] || cd ..; npm ci --include=dev --workspaces --include-workspace-root",
-  "buildCommand": "CFG=\"$(find /vercel -maxdepth 6 -name next.config.js -not -path '*/node_modules/*' 2>/dev/null | head -1)\"; echo \"Next config at: $CFG\"; cd \"$(dirname \"$CFG\")\" && npx --no-install next build",
-  "outputDirectory": "frontend/out"
+  "buildCommand": "CFG=\"$(find /vercel -maxdepth 6 -name next.config.js -not -path '*/node_modules/*' 2>/dev/null | head -1)\"; D=\"$(dirname \"$CFG\")\"; R=\"$(dirname \"$D\")\"; echo \"frontend=$D root=$R\"; cd \"$D\" && npx --no-install next build && rm -rf \"$R/out\" && cp -r out \"$R/out\" && echo \"copied out -> $R/out\"",
+  "outputDirectory": "out"
 }
