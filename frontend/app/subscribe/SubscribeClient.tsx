@@ -141,9 +141,10 @@ export default function Subscribe() {
         <div className="sec-tag"><span className="num">§ Subscribe</span> Get an API key</div>
         <h1 className="sec-h" style={{ fontSize: 'clamp(30px,4vw,44px)' }}>Subscribe in USDC.</h1>
         <p className="sec-lede">
-          Connect a wallet, approve USDC, and call <code className="mono">subscribe(tier)</code>. On
-          confirmation, your API key and <span className="mono">mfr.robot-id.eth</span> namespace are
-          auto-provisioned by the on-chain <span className="mono">Subscribed</span> event.
+          Connect a wallet, reserve your namespace, approve USDC, and call{' '}
+          <code className="mono">subscribe(tier)</code>. On confirmation, your API key is issued and the{' '}
+          <span className="mono">&lt;oem&gt;.robot-id.eth</span> namespace you reserved is provisioned by
+          the on-chain <span className="mono">Subscribed</span> event.
         </p>
 
         <div className="connect-row">

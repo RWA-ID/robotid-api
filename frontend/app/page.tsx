@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { LiveRibbon } from '@/components/LiveRibbon';
 import { IntentConsole } from '@/components/IntentConsole';
 import { SiteNav } from '@/components/SiteNav';
+import { TypingEns } from '@/components/TypingEns';
 import {
   Datamatrix, Arrow, Check, Ext,
   IcOem, IcFleet, IcReg,
@@ -13,7 +14,7 @@ const REPO = 'https://github.com/RWA-ID/robotid-api';
 
 const MODULES = [
   { n: '01', Ico: IcIdentity, t: 'Robot Identity',
-    d: 'A permanent, programmable NFT identity per unit — ERC-721 with optional ERC-5192 soulbound lock and ERC-2981 royalties. The serial is stored as a privacy-preserving keccak256 hash, yet stays independently verifiable. Each unit resolves to SN-X.mfr.robot-id.eth and always points to its current owner.',
+    d: 'A permanent, programmable NFT identity per unit — ERC-721 with optional ERC-5192 soulbound lock and ERC-2981 royalties. The serial is stored as a privacy-preserving keccak256 hash, yet stays independently verifiable. Each unit resolves to <serial>.<oem>.robot-id.eth and always points to its current owner.',
     gets: 'OEMs get a tamper-proof birth certificate per robot; owners get a portable, tradable identity.' },
   { n: '02', Ico: IcVoice, t: 'AI / Voice Intent',
     d: 'On-chain authorization and an immutable audit log for every AI-agent or voice command. The ROS2-bridge adapter maps natural-language intents to ROS2 action goals, checks them against the robot’s spend rules, and records each as executed or rejected — with the reason. Alexa, Google Assistant, and custom-LLM adapters ship too.',
@@ -46,7 +47,7 @@ const CONTRACT_ROWS: [string, keyof typeof CONTRACTS, string][] = [
   ['IntentRouter', 'intentRouter', 'AI/voice authorization + immutable audit log'],
   ['CapabilityRegistry', 'capabilityRegistry', 'OEM-signed, append-only attestations'],
   ['OTAVerifier', 'otaVerifier', 'Firmware signature gate · downgrade reject'],
-  ['Subscription', 'subscription', 'USDC tiers · drives key + namespace provisioning'],
+  ['Subscription', 'subscription', 'USDC tiers · drives API-key issuance'],
 ];
 
 function addrFor(key: keyof typeof CONTRACTS): string {
@@ -58,14 +59,15 @@ function SpecPlate() {
   return (
     <div className="plate crop">
       <div className="plate-inner">
+        <div className="scanline" />
         <div className="plate-bar">
-          <span>UNIT&nbsp;RECORD · SPECIMEN</span>
+          <span>UNIT&nbsp;RECORD · ON-CHAIN</span>
           <span className="dots"><i style={{ background: 'var(--ok)' }} /><i /><i /></span>
         </div>
         <div className="plate-body">
           <div className="plate-id">
             <div className="lab">ENS Identity</div>
-            <div className="val">sn-a1b2c3.<b>boston-dynamics</b>.robot-id.eth</div>
+            <div className="val"><TypingEns /></div>
             <div className="etch" />
           </div>
           <div className="readouts">
@@ -88,7 +90,11 @@ function SpecPlate() {
 
 function Hero() {
   return (
-    <header className="dark blueprint" id="top">
+    <header className="dark blueprint hero-stage" id="top">
+      <div className="aura a1" aria-hidden="true" />
+      <div className="aura a2" aria-hidden="true" />
+      <div className="floor" aria-hidden="true"><i /></div>
+      <div className="horizon" aria-hidden="true" />
       <SiteNav />
       <div className="wrap hero">
         <div className="hero-grid">
@@ -113,7 +119,34 @@ function Hero() {
               <span><span className="led" />Firmware verification</span>
             </div>
           </div>
-          <SpecPlate />
+          <div className="core">
+            <div className="rings" aria-hidden="true">
+              <div className="ring r-radar" />
+              <svg className="svgring" width="500" height="500" viewBox="0 0 500 500" fill="none">
+                <circle cx="250" cy="250" r="244" stroke="rgba(255,178,0,0.22)" strokeWidth="1" strokeDasharray="2 8" />
+                <circle cx="250" cy="250" r="244" stroke="rgba(255,178,0,0.10)" strokeWidth="1" />
+                <g stroke="rgba(255,178,0,0.5)" strokeWidth="1.4">
+                  <path d="M250 6 v14" /><path d="M250 480 v14" /><path d="M6 250 h14" /><path d="M480 250 h14" />
+                </g>
+              </svg>
+              <svg className="svgring rev" width="420" height="420" viewBox="0 0 420 420" fill="none">
+                <circle cx="210" cy="210" r="200" stroke="rgba(143,186,255,0.16)" strokeWidth="1" strokeDasharray="44 14 4 14" />
+                <circle cx="210" cy="210" r="200" stroke="rgba(255,178,0,0.30)" strokeWidth="1" strokeDasharray="1 22" />
+              </svg>
+              <svg className="svgring fast" width="336" height="336" viewBox="0 0 336 336" fill="none">
+                <circle cx="168" cy="168" r="160" stroke="rgba(255,255,255,0.10)" strokeWidth="1" strokeDasharray="3 7" />
+                <g fill="var(--signal)">
+                  <circle cx="168" cy="8" r="2.6" /><circle cx="168" cy="328" r="2.6" />
+                  <circle cx="8" cy="168" r="2.6" /><circle cx="328" cy="168" r="2.6" />
+                </g>
+              </svg>
+            </div>
+            <div className="core-float">
+              <div className="chip-orbit c1"><i />RESOLVED · CCIP-READ</div>
+              <div className="chip-orbit c2"><i />FIRMWARE SIGNED ✓</div>
+              <SpecPlate />
+            </div>
+          </div>
         </div>
         <LiveRibbon />
       </div>
@@ -223,11 +256,11 @@ function Modules() {
 
 function Steps() {
   const steps: [string, string, ReactNode][] = [
-    ['01', 'Subscribe in USDC', <span key="1">Connect a wallet, approve USDC, call <code>subscribe(tier)</code>. The on-chain event provisions your API key and <code>mfr.robot-id.eth</code> namespace automatically.</span>],
+    ['01', 'Subscribe in USDC', <span key="1">Connect a wallet, reserve your namespace, approve USDC, call <code>subscribe(tier)</code>. The on-chain event issues your API key and provisions the <code>&lt;oem&gt;.robot-id.eth</code> namespace you chose at checkout.</span>],
     ['02', 'Pre-authorize a batch', <span key="2">Submit up to <b>100,000 serials</b> off-chain. The API builds a Merkle tree; you commit one root via <code>submitRoot</code>. One tx authorizes your whole run.</span>],
     ['03', 'Units claim identity', <span key="3">Each robot calls <code>claimWithProof(…)</code> to mint its NFT — soulbound or transferable, your choice. No per-unit fee; gas only.</span>],
     ['04', 'Attest & secure', <span key="4">Sign capability attestations (payload, zone, certs) and register your firmware-signing key. Set each AgentWallet’s spend rules once.</span>],
-    ['05', 'Resolve & operate', <span key="5"><code>SN-X.mfr.robot-id.eth</code> resolves to the current owner via CCIP-Read. Robots route intents and payments — under the limits you set.</span>],
+    ['05', 'Resolve & operate', <span key="5"><code>&lt;serial&gt;.&lt;oem&gt;.robot-id.eth</code> resolves to the current owner via CCIP-Read. Robots route intents and payments — under the limits you set.</span>],
   ];
   return (
     <section className="section" id="how">
@@ -307,8 +340,9 @@ function Ens() {
         <div className="sec-tag"><span className="num">§ 07</span> ENS naming</div>
         <h2 className="sec-h">Every robot, a name.</h2>
         <p className="sec-lede">
-          On a paid subscription your OEM namespace is provisioned under <span className="mono">robot-id.eth</span>{' '}
-          via ENS NameWrapper. Units resolve through a CCIP-Read gateway that reads <span className="mono">ownerOf</span>{' '}
+          You pick your OEM namespace at checkout; on a paid subscription it’s provisioned under{' '}
+          <span className="mono">robot-id.eth</span> via ENS NameWrapper. Units resolve through a CCIP-Read
+          gateway that reads <span className="mono">ownerOf</span>{' '}
           live — so a name always points to the robot’s current holder, even after resale, with zero gas per transfer.
         </p>
         <div className="tree-card">
@@ -319,7 +353,7 @@ function Ens() {
           <div className="tnode ind1">
             <span className="branch">└─</span>
             <span className="dat">boston-dynamics.<span className="sig">robot-id.eth</span></span>
-            <span className="note">← OEM namespace · granted on subscription</span>
+            <span className="note">← OEM namespace · you choose it at checkout</span>
           </div>
           <div className="tnode ind2">
             <span className="branch">├─</span>
@@ -395,8 +429,8 @@ function Pricing() {
         <h2 className="sec-h">On-chain USDC subscriptions.</h2>
         <p className="sec-lede">
           No registration fees — minting a unit costs gas only. Revenue is the subscription alone, paid
-          in USDC and settled on-chain. Subscribing auto-provisions your API key and your{' '}
-          <span className="mono">mfr.robot-id.eth</span> namespace.
+          in USDC and settled on-chain. Subscribing issues your API key and provisions the{' '}
+          <span className="mono">&lt;oem&gt;.robot-id.eth</span> namespace you pick at checkout.
         </p>
         <div className="connect-row">
           <a href="/subscribe" className="btn btn-primary">Connect wallet · subscribe <Arrow /></a>
@@ -451,7 +485,13 @@ function Footer() {
           <span>Crypto-native</span><span className="sep">·</span>
           <span>No fiat rails</span>
         </div>
-        <div className="brand-f">Robot&nbsp;<b>ID</b></div>
+        <div className="foot-right">
+          <a className="x-link" href="https://x.com/robotidtech" target="_blank" rel="noreferrer" aria-label="robot-id.eth on X (@robotidtech)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+            @robotidtech
+          </a>
+          <span className="brand-f">Robot&nbsp;<b>ID</b></span>
+        </div>
       </div>
     </footer>
   );
