@@ -1,0 +1,94 @@
+### robot-id.eth API — REST collection (VS Code REST Client / IntelliJ HTTP)
+@base = http://localhost:3001
+@apiKey = rid_REPLACE_ME
+
+### Health
+GET {{base}}/health
+
+### Tiers + USDC prices
+GET {{base}}/auth/tiers
+
+### SIWE → API key (requires an active on-chain subscription)
+POST {{base}}/auth/keys/wallet
+Content-Type: application/json
+
+{
+  "address": "0xYourOemAddress",
+  "message": "robot-id.eth: issue API key",
+  "signature": "0xSignatureOfMessage"
+}
+
+### Key info (auth)
+GET {{base}}/auth/keys/info
+Authorization: Bearer {{apiKey}}
+
+### Read a robot (public)
+GET {{base}}/api/v1/robots/1
+
+### Register single (auth) → unsigned tx
+POST {{base}}/api/v1/robots
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "to": "0xRobotHolder",
+  "serialNumber": "SPOT-0001",
+  "manufacturer": "Boston Dynamics",
+  "model": "Spot",
+  "capabilityClass": "quadruped-inspection",
+  "firmwareVersion": 1,
+  "locked": false
+}
+
+### Preauthorize a batch (auth) → Merkle root + unsigned submitRoot tx
+POST {{base}}/api/v1/robots/batch/preauthorize
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "manufacturer": "Unitree",
+  "model": "Go2",
+  "capabilityClass": "quadruped",
+  "locked": false,
+  "serials": [
+    { "serialNumber": "GO2-0001", "owner": "0x000000000000000000000000000000000000dEaD" },
+    { "serialNumber": "GO2-0002", "owner": "0x000000000000000000000000000000000000bEEF" }
+  ]
+}
+
+### Proof for one serial (public)
+GET {{base}}/api/v1/robots/batch/0xBATCH_ID/proof/GO2-0001
+
+### Capability — latest attestations
+GET {{base}}/api/v1/capability/1
+
+### Capability — verify proof
+POST {{base}}/api/v1/capability/1/verify
+Content-Type: application/json
+
+{ "capabilityKey": "max_payload_kg", "leaf": "0x...", "proof": ["0x..."] }
+
+### Submit an AI/voice intent (auth) → unsigned tx
+POST {{base}}/api/v1/intent
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{
+  "robotId": 1,
+  "command": "Authorize payment for charging dock B and log the task",
+  "actionTarget": "0xVendor",
+  "value": "0",
+  "nonce": 1
+}
+
+### OTA — verify a firmware signature
+GET {{base}}/api/v1/ota/1/verify?firmwareHash=0x...&newVersion=4&signature=0x...&oemAddress=0x...
+
+### Subscription status
+GET {{base}}/api/v1/subscription/0xYourOemAddress
+
+### GraphQL
+POST {{base}}/graphql
+Content-Type: application/json
+
+{ "query": "{ totalMinted subscription(address:\"0x0000000000000000000000000000000000000000\"){ active tierName } }" }

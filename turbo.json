@@ -1,0 +1,40 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": [
+    "RPC_URL",
+    "ALCHEMY_API_KEY",
+    "CHAIN_ID",
+    "PINATA_JWT",
+    "REOWN_PROJECT_ID",
+    "ADMIN_PRIVATE_KEY",
+    "TREASURY_ADDRESS",
+    "USDC_ADDRESS",
+    "ENS_PARENT",
+    "NAMEWRAPPER_ADDRESS",
+    "PORT",
+    "ROBOT_IDENTITY_ADDRESS",
+    "AGENT_WALLET_ADDRESS",
+    "INTENT_ROUTER_ADDRESS",
+    "CAPABILITY_REGISTRY_ADDRESS",
+    "OTA_VERIFIER_ADDRESS",
+    "MERKLE_ORACLE_ADDRESS",
+    "SUBSCRIPTION_ADDRESS"
+  ],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", ".next/**", "out/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "lint": {},
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    }
+  }
+}

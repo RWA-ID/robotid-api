@@ -1,0 +1,88 @@
+specVersion: 1.0.0
+description: robot-id.eth — indexes robot identity, intents, capabilities, and subscriptions.
+repository: https://github.com/RWA-ID/robot-id-api
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: RobotIdentity
+    network: mainnet
+    source:
+      abi: RobotIdentity
+      address: "0x0000000000000000000000000000000000000000"
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [Robot, Transfer]
+      abis:
+        - name: RobotIdentity
+          file: ./abis/RobotIdentity.json
+      eventHandlers:
+        - event: RobotRegistered(indexed uint256,indexed bytes32,indexed address,string,string,bool)
+          handler: handleRobotRegistered
+        - event: RobotClaimed(indexed uint256,indexed bytes32,bytes32,address)
+          handler: handleRobotClaimed
+        - event: Transfer(indexed address,indexed address,indexed uint256)
+          handler: handleTransfer
+      file: ./src/robot-identity.ts
+  - kind: ethereum
+    name: IntentRouter
+    network: mainnet
+    source:
+      abi: IntentRouter
+      address: "0x0000000000000000000000000000000000000000"
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [Intent]
+      abis:
+        - name: IntentRouter
+          file: ./abis/IntentRouter.json
+      eventHandlers:
+        - event: IntentExecuted(indexed uint256,indexed uint256,bytes32,address,uint256,address)
+          handler: handleIntentExecuted
+        - event: IntentRejected(indexed uint256,indexed uint256,bytes32,uint8)
+          handler: handleIntentRejected
+      file: ./src/intent-router.ts
+  - kind: ethereum
+    name: CapabilityRegistry
+    network: mainnet
+    source:
+      abi: CapabilityRegistry
+      address: "0x0000000000000000000000000000000000000000"
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [Attestation]
+      abis:
+        - name: CapabilityRegistry
+          file: ./abis/CapabilityRegistry.json
+      eventHandlers:
+        - event: CapabilityAttested(indexed uint256,indexed uint256,indexed bytes32,bytes32,bytes32,address)
+          handler: handleCapabilityAttested
+      file: ./src/capability-registry.ts
+  - kind: ethereum
+    name: Subscription
+    network: mainnet
+    source:
+      abi: Subscription
+      address: "0x0000000000000000000000000000000000000000"
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities: [Subscriber]
+      abis:
+        - name: Subscription
+          file: ./abis/Subscription.json
+      eventHandlers:
+        - event: Subscribed(indexed address,uint8,uint256)
+          handler: handleSubscribed
+      file: ./src/subscription.ts

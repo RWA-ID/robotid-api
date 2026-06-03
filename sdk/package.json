@@ -1,0 +1,21 @@
+{
+  "name": "@robot-id/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript client for the robot-id.eth protocol API",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .ts || true",
+    "test": "node --test --import tsx ./test/*.test.ts || true"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

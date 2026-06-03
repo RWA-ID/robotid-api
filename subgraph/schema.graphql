@@ -1,0 +1,45 @@
+type Robot @entity {
+  id: ID! # tokenId
+  tokenId: BigInt!
+  serialHash: Bytes!
+  manufacturer: String!
+  model: String!
+  owner: Bytes!
+  locked: Boolean!
+  claimedFromBatch: Bytes
+  registeredAt: BigInt!
+  firmwareVersion: Int
+}
+
+type Intent @entity(immutable: true) {
+  id: ID! # intentId
+  intentId: BigInt!
+  robot: BigInt!
+  intentHash: Bytes!
+  actionTarget: Bytes
+  value: BigInt
+  submitter: Bytes
+  authorized: Boolean!
+  rejectReason: Int
+  timestamp: BigInt!
+}
+
+type Attestation @entity(immutable: true) {
+  id: ID! # attestationId
+  attestationId: BigInt!
+  robot: BigInt!
+  capabilityKey: Bytes!
+  value: Bytes!
+  merkleRoot: Bytes!
+  oem: Bytes!
+  timestamp: BigInt!
+}
+
+type Subscriber @entity {
+  id: ID! # address
+  address: Bytes!
+  tier: Int!
+  expiry: BigInt!
+  subscriptionCount: Int!
+  lastSubscribedAt: BigInt!
+}

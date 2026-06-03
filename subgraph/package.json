@@ -1,0 +1,17 @@
+{
+  "name": "@robot-id/subgraph",
+  "version": "0.1.0",
+  "description": "The Graph indexing for robot-id.eth contracts",
+  "license": "MIT",
+  "scripts": {
+    "codegen": "graph codegen",
+    "build": "graph build",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ robot-id/robot-id",
+    "create-local": "graph create --node http://localhost:8020/ robot-id/robot-id",
+    "deploy-local": "graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 robot-id/robot-id"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.80.0",
+    "@graphprotocol/graph-ts": "^0.35.1"
+  }
+}

@@ -1,0 +1,155 @@
+import { Router } from 'express';
+import { encodeFunctionData, keccak256, toHex, type Hex } from 'viem';
+import { requireAddress } from '../lib/config.js';
+import { publicClient } from '../lib/viem.js';
+import { ROBOT_IDENTITY_ABI } from '../lib/contracts.js';
+import { requireApiKey, type AuthedRequest } from '../lib/auth.js';
+import { pinJSON } from '../lib/pinata.js';
+import { buildTree, batchIdOf, type BatchUnit } from '../lib/merkle.js';
+import { store, type BatchRecord } from '../lib/store.js';
+import { publish } from '../ws/server.js';
+
+export const robotsRouter = Router();
+
+// GET /api/v1/robots/:tokenId — live read: identity + current owner (public)
+robotsRouter.get('/:tokenId', async (req, res) => {
+  const tokenId = BigInt(req.params.tokenId);
+  const identity = requireAddress('robotIdentity');
+  try {
+    const [owner, uri, data] = await Promise.all([
+      publicClient.readContract({ address: identity, abi: ROBOT_IDENTITY_ABI, functionName: 'ownerOf', args: [tokenId] }),
+      publicClient.readContract({ address: identity, abi: ROBOT_IDENTITY_ABI, functionName: 'tokenURI', args: [tokenId] }),
+      publicClient.readContract({ address: identity, abi: ROBOT_IDENTITY_ABI, functionName: 'robots', args: [tokenId] }),
+    ]);
+    res.json({
+      tokenId: tokenId.toString(),
+      owner,
+      tokenURI: uri,
+      serialHash: data[0],
+      manufacturer: data[1],
+      model: data[2],
+      capabilityClass: data[3],
+      firmwareVersion: Number(data[4]),
+      registrationDate: Number(data[5]),
+      locked: data[6],
+    });
+  } catch {
+    res.status(404).json({ error: 'robot not found' });
+  }
+});
+
+/**
+ * POST /api/v1/robots (auth) — register single. Pins the profile to IPFS and
+ * returns an UNSIGNED transaction the OEM signs with their own wallet.
+ */
+robotsRouter.post('/', requireApiKey(), async (req: AuthedRequest, res) => {
+  const { to, serialNumber, manufacturer, model, capabilityClass, firmwareVersion = 0, locked = false, profile } = req.body ?? {};
+  if (!to || !serialNumber || !manufacturer || !model) {
+    return res.status(400).json({ error: 'to, serialNumber, manufacturer, model required' });
+  }
+  const serialHash = keccak256(toHex(serialNumber));
+  const tokenURI = await pinJSON(`robot-${serialHash.slice(2, 10)}`, {
+    manufacturer, model, capabilityClass, firmwareVersion, ...profile,
+  });
+
+  const data = encodeFunctionData({
+    abi: ROBOT_IDENTITY_ABI,
+    functionName: 'registerRobot',
+    args: [to, serialHash, manufacturer, model, capabilityClass ?? '', Number(firmwareVersion), Boolean(locked), tokenURI],
+  });
+
+  publish('robots', 'register.prepared', { to, manufacturer, model, serialHash });
+  res.json({ unsignedTx: { to: requireAddress('robotIdentity'), data, value: '0x0' }, serialHash, tokenURI });
+});
+
+/**
+ * POST /api/v1/robots/batch/preauthorize (auth) — up to 100K serials → Merkle
+ * root. Returns the batchId + root + an unsigned MerkleBatchOracle.submitRoot tx.
+ */
+robotsRouter.post('/batch/preauthorize', requireApiKey(), async (req: AuthedRequest, res) => {
+  const { manufacturer, model, capabilityClass = '', serials, locked = false } = req.body ?? {};
+  if (!Array.isArray(serials) || serials.length === 0) {
+    return res.status(400).json({ error: 'serials[] required' });
+  }
+  if (serials.length > 100_000) {
+    return res.status(400).json({ error: 'batch exceeds 100,000 serials' });
+  }
+
+  const oem = req.apiKey!.subscriber;
+  const units: BatchUnit[] = serials.map((s: { serialNumber: string; owner: Hex }) => ({
+    serialHash: keccak256(toHex(s.serialNumber)),
+    owner: s.owner,
+    locked: Boolean(locked),
+  }));
+
+  const tree = buildTree(units);
+  const nonce = BigInt(Date.now());
+  const batchId = batchIdOf(oem, nonce);
+
+  const rec: BatchRecord = {
+    batchId, oem, root: tree.root, manufacturer, model, capabilityClass,
+    units, serials: serials.map((s: { serialNumber: string }) => s.serialNumber),
+    createdAt: Date.now(), rootCommitted: false,
+  };
+  store.saveBatch(rec);
+
+  const { MERKLE_ORACLE_ABI } = await import('../lib/contracts.js');
+  const submitData = encodeFunctionData({ abi: MERKLE_ORACLE_ABI, functionName: 'submitRoot', args: [batchId, tree.root] });
+
+  res.json({
+    batchId, root: tree.root, count: units.length,
+    unsignedTx: { to: requireAddress('merkleOracle'), data: submitData, value: '0x0' },
+  });
+});
+
+// GET /api/v1/robots/batch/:id (auth) — batch summary
+robotsRouter.get('/batch/:id', requireApiKey(), (req, res) => {
+  const batch = store.getBatch(req.params.id);
+  if (!batch) return res.status(404).json({ error: 'batch not found' });
+  res.json({
+    batchId: batch.batchId, root: batch.root, manufacturer: batch.manufacturer,
+    model: batch.model, count: batch.units.length, createdAt: batch.createdAt,
+  });
+});
+
+// GET /api/v1/robots/batch/:id/proof/:serial — single proof (public)
+robotsRouter.get('/batch/:id/proof/:serial', (req, res) => {
+  const batch = store.getBatch(req.params.id);
+  if (!batch) return res.status(404).json({ error: 'batch not found' });
+  const idx = batch.serials.indexOf(req.params.serial);
+  if (idx < 0) return res.status(404).json({ error: 'serial not in batch' });
+  const tree = buildTree(batch.units);
+  res.json({
+    batchId: batch.batchId, serial: req.params.serial, index: idx,
+    leaf: tree.leaves[idx], proof: tree.proofOf(idx), unit: batch.units[idx],
+  });
+});
+
+// GET /api/v1/robots/batch/:id/proofs (auth) — paginated proofs
+robotsRouter.get('/batch/:id/proofs', requireApiKey(), (req, res) => {
+  const batch = store.getBatch(req.params.id);
+  if (!batch) return res.status(404).json({ error: 'batch not found' });
+  const page = Math.max(0, Number(req.query.page ?? 0));
+  const size = Math.min(500, Math.max(1, Number(req.query.size ?? 100)));
+  const tree = buildTree(batch.units);
+  const start = page * size;
+  const slice = batch.units.slice(start, start + size).map((u, i) => ({
+    index: start + i, serial: batch.serials[start + i], leaf: tree.leaves[start + i], proof: tree.proofOf(start + i), unit: u,
+  }));
+  res.json({ batchId: batch.batchId, page, size, total: batch.units.length, proofs: slice });
+});
+
+// POST /api/v1/robots/batch/:id/transfer (auth) — bulk safeTransferFrom calldata
+robotsRouter.post('/batch/:id/transfer', requireApiKey(), (req, res) => {
+  const { transfers } = req.body ?? {};
+  if (!Array.isArray(transfers) || transfers.length === 0) {
+    return res.status(400).json({ error: 'transfers[] of {from,to,tokenId} required' });
+  }
+  const identity = requireAddress('robotIdentity');
+  const txs = transfers.map((t: { from: Hex; to: Hex; tokenId: string }) => ({
+    to: identity,
+    data: encodeFunctionData({ abi: ROBOT_IDENTITY_ABI, functionName: 'safeTransferFrom', args: [t.from, t.to, BigInt(t.tokenId)] }),
+    value: '0x0',
+  }));
+  res.json({ unsignedTxs: txs });
+});

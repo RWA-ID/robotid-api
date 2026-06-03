@@ -1,0 +1,33 @@
+{
+  "name": "robot-id",
+  "private": true,
+  "version": "0.1.0",
+  "description": "robot-id.eth — the neutral ENS protocol layer for robots & autonomous machines",
+  "license": "MIT",
+  "workspaces": [
+    "api",
+    "sdk",
+    "intent-sdk",
+    "ccip-gateway",
+    "frontend",
+    "relayer"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "contracts:build": "forge build --root contracts",
+    "contracts:test": "forge test --root contracts",
+    "contracts:test:integration": "FOUNDRY_PROFILE=integration forge test --root contracts"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.3"
+  },
+  "packageManager": "npm@10.8.2",
+  "engines": {
+    "node": ">=20"
+  }
+}
