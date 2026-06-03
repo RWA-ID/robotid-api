@@ -1,32 +1,40 @@
 #!/usr/bin/env bash
-# Vercel build for the frontend workspace. Robust to whatever working
-# directory Vercel runs the build from, and emits output in every form Vercel
-# might look for: a plain out/ dir at both the frontend and repo-root bases,
-# plus the authoritative Build Output API (.vercel/output) at both bases.
+# Build the frontend workspace and place its static export in every directory
+# Vercel might check for output — the cwd Vercel invoked us from, the repo root,
+# the frontend dir, and every workspace dir — both as a plain out/ and as the
+# authoritative Build Output API (.vercel/output). This is robust to whatever
+# Root Directory the Vercel project is configured with.
 set -eu
 
-# Locate the Next.js app by its config, regardless of cwd.
+START="$(pwd)"
 CFG="$(find /vercel -maxdepth 6 -name next.config.js -not -path '*node_modules*' 2>/dev/null | head -1)"
 if [ -z "${CFG:-}" ]; then
   CFG="$(find / -maxdepth 8 -name next.config.js -not -path '*node_modules*' 2>/dev/null | head -1)"
 fi
 FRONT="$(cd "$(dirname "$CFG")" && pwd)"
 ROOT="$(dirname "$FRONT")"
-echo "[vercel-build] frontend=$FRONT root=$ROOT"
+echo "[vercel-build] start=$START frontend=$FRONT root=$ROOT"
 
 cd "$FRONT"
 npx --no-install next build
+SRC="$FRONT/out"
 
-# Plain output directory at the repo root (frontend/out already exists).
-rm -rf "$ROOT/out"
-cp -r "$FRONT/out" "$ROOT/out"
+# Candidate base directories Vercel may resolve the output against.
+BASES="$START $ROOT $FRONT"
+for d in "$ROOT"/*/; do
+  BASES="$BASES ${d%/}"
+done
 
-# Build Output API v3 (authoritative — Vercel serves .vercel/output/static).
-for BASE in "$FRONT" "$ROOT"; do
+for BASE in $BASES; do
+  [ -d "$BASE" ] || continue
+  if [ "$BASE" != "$FRONT" ]; then
+    rm -rf "$BASE/out"
+    cp -r "$SRC" "$BASE/out"
+  fi
   mkdir -p "$BASE/.vercel/output/static"
-  cp -r "$FRONT/out/." "$BASE/.vercel/output/static/"
+  cp -r "$SRC/." "$BASE/.vercel/output/static/"
   printf '{"version":3}' > "$BASE/.vercel/output/config.json"
-  echo "[vercel-build] wrote $BASE/.vercel/output"
+  echo "[vercel-build] wrote $BASE/out + .vercel/output"
 done
 
 echo "[vercel-build] done"
