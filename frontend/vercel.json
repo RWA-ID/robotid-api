@@ -2,6 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
   "installCommand": "[ -f package-lock.json ] || cd ..; npm ci --include=dev --workspaces --include-workspace-root",
-  "buildCommand": "cd \"$(dirname \"$(find /vercel -maxdepth 5 -name next.config.js -not -path '*node_modules*'|head -1)\")\"&&npx --no-install next build&&rm -rf ../out&&cp -r out ../out",
+  "buildCommand": "bash \"$(find /vercel -maxdepth 4 -name vercel-build.sh -not -path '*node_modules*'|head -1)\"",
   "outputDirectory": "out"
 }
