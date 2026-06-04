@@ -9,6 +9,9 @@ function req(name: string, fallback?: string): string {
 export const config = {
   port: Number(process.env.PORT ?? 3001),
   chainId: Number(process.env.CHAIN_ID ?? 1),
+  // When set, the durable Redis-backed store is used; otherwise an in-memory
+  // store (single-process, non-durable) is the fallback for local dev.
+  redisUrl: process.env.REDIS_URL,
   rpcUrl: req('RPC_URL', 'http://127.0.0.1:8545'),
   adminPrivateKey: process.env.ADMIN_PRIVATE_KEY as `0x${string}` | undefined,
   gatewaySignerKey: process.env.GATEWAY_SIGNER_KEY as `0x${string}` | undefined,

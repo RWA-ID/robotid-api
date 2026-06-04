@@ -3,7 +3,7 @@ import { encodeFunctionData, type Hex } from 'viem';
 import { requireAddress } from '../lib/config.js';
 import { publicClient } from '../lib/viem.js';
 import { ROBOT_IDENTITY_ABI } from '../lib/contracts.js';
-import { requireApiKey, type AuthedRequest } from '../lib/auth.js';
+import { requireApiKey, TIER_CAPS, type AuthedRequest } from '../lib/auth.js';
 import { pinJSON } from '../lib/pinata.js';
 import { buildTree, batchIdOf, type BatchUnit } from '../lib/merkle.js';
 import { store, type BatchRecord } from '../lib/store.js';
@@ -48,6 +48,15 @@ robotsRouter.post('/', requireApiKey(), async (req: AuthedRequest, res) => {
   if (!to || !serialNumber || !manufacturer || !model) {
     return res.status(400).json({ error: 'to, serialNumber, manufacturer, model required' });
   }
+
+  // Unit cap (lifetime, best-effort on prepared registrations). Atomic
+  // reserve-then-act: consumes 1 unit up front; never double-spends under load.
+  const unitCap = TIER_CAPS[req.apiKey!.tier].units;
+  const reserved = await store.reserveUnits(req.apiKey!.key, 1, unitCap);
+  if (!reserved.allowed) {
+    return res.status(403).json({ error: 'Unit cap reached', cap: reserved.cap, used: reserved.used });
+  }
+
   const serialSlug = normalizeSlug(serialNumber);
   const serialHash = serialHashOf(serialNumber);
   const tokenURI = await pinJSON(`robot-${serialHash.slice(2, 10)}`, {
@@ -61,7 +70,7 @@ robotsRouter.post('/', requireApiKey(), async (req: AuthedRequest, res) => {
   });
 
   // Preview the resolvable ENS name using the OEM's reserved namespace slug.
-  const mfrSlug = store.slugForSubscriber(req.apiKey!.subscriber);
+  const mfrSlug = await store.slugForSubscriber(req.apiKey!.subscriber);
   const name = mfrSlug ? unitName(serialSlug, mfrSlug) : null;
 
   publish('robots', 'register.prepared', { to, manufacturer, model, serialHash });
@@ -97,6 +106,19 @@ robotsRouter.post('/batch/preauthorize', requireApiKey(), async (req: AuthedRequ
     return res.status(422).json({ error: 'serials collide after normalization', collisions });
   }
 
+  // Unit cap — the whole (validated) batch must fit in the tier's remaining
+  // quota. Atomic: reserves all serials at once, rolling back if it overflows.
+  const unitCap = TIER_CAPS[req.apiKey!.tier].units;
+  const reserved = await store.reserveUnits(req.apiKey!.key, serials.length, unitCap);
+  if (!reserved.allowed) {
+    return res.status(403).json({
+      error: 'Unit cap reached',
+      cap: reserved.cap,
+      used: reserved.used,
+      requested: serials.length,
+    });
+  }
+
   const units: BatchUnit[] = serials.map((s: { serialNumber: string; owner: Hex }) => ({
     serialHash: serialHashOf(s.serialNumber),
     owner: s.owner,
@@ -112,7 +134,7 @@ robotsRouter.post('/batch/preauthorize', requireApiKey(), async (req: AuthedRequ
     units, serials: serials.map((s: { serialNumber: string }) => s.serialNumber),
     createdAt: Date.now(), rootCommitted: false,
   };
-  store.saveBatch(rec);
+  await store.saveBatch(rec);
 
   const { MERKLE_ORACLE_ABI } = await import('../lib/contracts.js');
   const submitData = encodeFunctionData({ abi: MERKLE_ORACLE_ABI, functionName: 'submitRoot', args: [batchId, tree.root] });
@@ -124,8 +146,8 @@ robotsRouter.post('/batch/preauthorize', requireApiKey(), async (req: AuthedRequ
 });
 
 // GET /api/v1/robots/batch/:id (auth) — batch summary
-robotsRouter.get('/batch/:id', requireApiKey(), (req, res) => {
-  const batch = store.getBatch(req.params.id);
+robotsRouter.get('/batch/:id', requireApiKey(), async (req, res) => {
+  const batch = await store.getBatch(req.params.id);
   if (!batch) return res.status(404).json({ error: 'batch not found' });
   res.json({
     batchId: batch.batchId, root: batch.root, manufacturer: batch.manufacturer,
@@ -134,8 +156,8 @@ robotsRouter.get('/batch/:id', requireApiKey(), (req, res) => {
 });
 
 // GET /api/v1/robots/batch/:id/proof/:serial — single proof (public)
-robotsRouter.get('/batch/:id/proof/:serial', (req, res) => {
-  const batch = store.getBatch(req.params.id);
+robotsRouter.get('/batch/:id/proof/:serial', async (req, res) => {
+  const batch = await store.getBatch(req.params.id);
   if (!batch) return res.status(404).json({ error: 'batch not found' });
   const idx = batch.serials.indexOf(req.params.serial);
   if (idx < 0) return res.status(404).json({ error: 'serial not in batch' });
@@ -147,8 +169,8 @@ robotsRouter.get('/batch/:id/proof/:serial', (req, res) => {
 });
 
 // GET /api/v1/robots/batch/:id/proofs (auth) — paginated proofs
-robotsRouter.get('/batch/:id/proofs', requireApiKey(), (req, res) => {
-  const batch = store.getBatch(req.params.id);
+robotsRouter.get('/batch/:id/proofs', requireApiKey(), async (req, res) => {
+  const batch = await store.getBatch(req.params.id);
   if (!batch) return res.status(404).json({ error: 'batch not found' });
   const page = Math.max(0, Number(req.query.page ?? 0));
   const size = Math.min(500, Math.max(1, Number(req.query.size ?? 100)));

@@ -16,6 +16,7 @@ import { ccipRouter } from './routes/ccip.js';
 import { graphqlHandler } from './graphql.js';
 import { attachWebSocket } from './ws/server.js';
 import { startSubscriptionWatcher } from './listeners/subscription-watcher.js';
+import { store } from './lib/store.js';
 
 const app = express();
 app.use(cors());
@@ -24,8 +25,14 @@ app.use(express.json({ limit: '25mb' })); // large batches
 // serialize BigInt in JSON responses
 app.set('json replacer', (_k: string, v: unknown) => (typeof v === 'bigint' ? v.toString() : v));
 
-app.get('/health', (_req, res) =>
-  res.json({ status: 'ok', chainId: config.chainId, parent: config.ensParent, ts: Date.now() }),
+app.get('/health', async (_req, res) =>
+  res.json({
+    status: 'ok',
+    chainId: config.chainId,
+    parent: config.ensParent,
+    store: await store.health(),
+    ts: Date.now(),
+  }),
 );
 
 app.use('/auth', authRouter);

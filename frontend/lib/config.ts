@@ -19,6 +19,10 @@ export const CONTRACTS = {
   merkleOracle: process.env.NEXT_PUBLIC_MERKLE_ORACLE_ADDRESS ?? '0xC8CE068dE9c38Db8780B7a70174fb453BDC8BB13',
 };
 
+// Each tier is the same product, scaled. Manufacturer is capped, OEM is the
+// middle most real OEMs land on, Enterprise is "Unlimited" across the board.
+// `specs` drives the comparison matrix on the landing page; `requests`/`rate`
+// stay as the compact summary line used by the /subscribe picker.
 export const TIERS = [
   {
     idx: 0,
@@ -27,7 +31,16 @@ export const TIERS = [
     priceUsdc: 5_000_000_000n,
     requests: '1,000,000 / mo',
     rate: '300 / min',
-    perks: ['✓ *.mfr namespace', 'Basic intent adapters', 'REST · GraphQL · WS'],
+    specs: [
+      { k: 'Robot identities', v: 'Up to 10,000' },
+      { k: 'OEM namespaces', v: '1' },
+      { k: 'Batch pre-authorize', v: '10k serials / batch' },
+      { k: 'Signing keys', v: '1' },
+      { k: 'API requests', v: '1M / mo · 300/min' },
+      { k: 'Intent adapters', v: 'Basic' },
+      { k: 'Chains', v: 'Mainnet' },
+      { k: 'Support', v: 'Community + email' },
+    ],
     featured: false,
   },
   {
@@ -37,7 +50,16 @@ export const TIERS = [
     priceUsdc: 7_500_000_000n,
     requests: '5,000,000 / mo',
     rate: '1,000 / min',
-    perks: ['✓ *.mfr namespace', 'All intent adapters', 'Priority support'],
+    specs: [
+      { k: 'Robot identities', v: 'Up to 250,000' },
+      { k: 'OEM namespaces', v: 'Up to 5 brands' },
+      { k: 'Batch pre-authorize', v: '100k serials / batch' },
+      { k: 'Signing keys', v: '5 · rotation' },
+      { k: 'API requests', v: '5M / mo · 1,000/min' },
+      { k: 'Intent adapters', v: 'All adapters' },
+      { k: 'Chains', v: 'Mainnet' },
+      { k: 'Support', v: 'Priority (24h)' },
+    ],
     featured: true,
   },
   {
@@ -47,7 +69,16 @@ export const TIERS = [
     priceUsdc: 12_500_000_000n,
     requests: 'Unlimited',
     rate: '5,000 / min',
-    perks: ['✓ + multi-chain', 'White-label', 'Dedicated SLA'],
+    specs: [
+      { k: 'Robot identities', v: 'Unlimited' },
+      { k: 'OEM namespaces', v: 'Unlimited' },
+      { k: 'Batch pre-authorize', v: 'Unlimited batches' },
+      { k: 'Signing keys', v: 'Unlimited · HSM' },
+      { k: 'API requests', v: 'Unlimited · 5,000/min' },
+      { k: 'Intent adapters', v: 'All + custom' },
+      { k: 'Chains', v: 'Multi-chain' },
+      { k: 'Support', v: 'Dedicated SLA' },
+    ],
     featured: false,
   },
 ] as const;

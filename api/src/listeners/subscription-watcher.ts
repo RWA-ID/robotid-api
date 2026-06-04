@@ -24,7 +24,7 @@ export function startSubscriptionWatcher(): () => void {
     address: subscription,
     abi: SUBSCRIPTION_ABI,
     eventName: 'Subscribed',
-    onLogs: (logs) => {
+    onLogs: async (logs) => {
       for (const log of logs) {
         const { subscriber, tier, expiry } = log.args as {
           subscriber: Hex;
@@ -32,8 +32,8 @@ export function startSubscriptionWatcher(): () => void {
           expiry: bigint;
         };
         const tierName = TIER_NAMES[Number(tier)] ?? 'SmallManufacturer';
-        const rec = store.issueKey(subscriber, tierName);
-        const chosenSlug = store.slugForSubscriber(subscriber); // OEM pick at checkout, if any
+        const rec = await store.issueKey(subscriber, tierName);
+        const chosenSlug = await store.slugForSubscriber(subscriber); // OEM pick at checkout, if any
         console.log(
           `[watcher] Subscribed ${subscriber} tier=${tierName} expiry=${expiry} → key issued` +
             (chosenSlug ? ` slug=${chosenSlug}` : ' (no slug reserved — address fallback)'),

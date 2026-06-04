@@ -194,7 +194,8 @@ const ack = await plugin.handleUtterance(
           <ul>
             <li><code>401</code> — missing/invalid API key</li>
             <li><code>402</code> — subscription inactive or expired</li>
-            <li><code>429</code> — rate limit exceeded for tier</li>
+            <li><code>403</code> — tier unit or namespace cap reached</li>
+            <li><code>429</code> — per-minute rate limit or monthly quota exceeded for tier</li>
             <li><code>404</code> — robot / batch not found</li>
           </ul>
 

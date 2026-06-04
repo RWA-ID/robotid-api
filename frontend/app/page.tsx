@@ -4,7 +4,7 @@ import { IntentConsole } from '@/components/IntentConsole';
 import { SiteNav } from '@/components/SiteNav';
 import { TypingEns } from '@/components/TypingEns';
 import {
-  Datamatrix, Arrow, Check, Ext,
+  Datamatrix, Arrow, Ext,
   IcOem, IcFleet, IcReg,
   IcIdentity, IcVoice, IcPayments, IcAttest, IcFirmware,
 } from '@/components/Schematics';
@@ -442,12 +442,14 @@ function Pricing() {
               {t.featured && <span className="badge">Recommended</span>}
               <div className="tn">{t.name}</div>
               <div className="price">${t.priceUsd.toLocaleString()}<span> / mo</span></div>
-              <div className="meta">{t.requests} · {t.rate}</div>
-              <ul>
-                {t.perks.map((p) => (
-                  <li key={p}><span className="ck"><Check size={14} /></span>{p}</li>
+              <dl className="specs">
+                {t.specs.map((s) => (
+                  <div className="spec" key={s.k}>
+                    <dt>{s.k}</dt>
+                    <dd>{s.v}</dd>
+                  </div>
                 ))}
-              </ul>
+              </dl>
               <a href={`/subscribe?tier=${t.idx}`} className={`btn ${t.featured ? 'btn-primary' : 'btn-ghost'}`}>
                 Subscribe in USDC
               </a>

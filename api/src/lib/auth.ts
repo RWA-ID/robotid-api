@@ -8,15 +8,30 @@ export interface AuthedRequest extends Request {
   apiKey?: ApiKeyRecord;
 }
 
-// Per-tier limits (§5.3). Requests/mo + rate/min.
+// Per-tier API limits (§5.3). Requests/mo + rate/min.
 export const TIER_LIMITS: Record<TierName, { requestsPerMonth: number; ratePerMin: number }> = {
   SmallManufacturer: { requestsPerMonth: 1_000_000, ratePerMin: 300 },
   OEM: { requestsPerMonth: 5_000_000, ratePerMin: 1_000 },
   Enterprise: { requestsPerMonth: Number.POSITIVE_INFINITY, ratePerMin: 5_000 },
 };
 
-// naive in-memory sliding-window rate limiter per key
-const windows = new Map<string, { start: number; count: number }>();
+// Per-tier resource caps. `units` = lifetime robot identities; `namespaces` =
+// OEM brand slugs under robot-id.eth. Mirrors the pricing matrix on the site.
+export const TIER_CAPS: Record<TierName, { units: number; namespaces: number }> = {
+  SmallManufacturer: { units: 10_000, namespaces: 1 },
+  OEM: { units: 250_000, namespaces: 5 },
+  Enterprise: { units: Number.POSITIVE_INFINITY, namespaces: Number.POSITIVE_INFINITY },
+};
+
+/**
+ * The namespace cap that applies to `addr` right now. A wallet with an active
+ * subscription gets its tier's cap; an unsubscribed wallet at checkout may still
+ * reserve its first (primary) slug, matching reserve-before-payment.
+ */
+export async function namespaceCapFor(addr: `0x${string}`): Promise<number> {
+  if (!(await isSubscriptionActive(addr))) return 1;
+  return TIER_CAPS[await tierOf(addr)].namespaces;
+}
 
 export async function isSubscriptionActive(addr: `0x${string}`): Promise<boolean> {
   const subscription = config.addresses.subscription;
@@ -50,7 +65,7 @@ export function requireApiKey() {
     const key = raw.replace(/^Bearer\s+/i, '').trim();
     if (!key) return res.status(401).json({ error: 'Missing API key' });
 
-    const rec = store.getKey(key);
+    const rec = await store.getKey(key);
     if (!rec) return res.status(401).json({ error: 'Invalid API key' });
 
     // re-check live subscription state on every request
@@ -62,21 +77,27 @@ export function requireApiKey() {
       });
     }
 
-    // rate limit per tier
-    const limit = TIER_LIMITS[rec.tier].ratePerMin;
-    const now = Date.now();
-    const w = windows.get(key) ?? { start: now, count: 0 };
-    if (now - w.start >= 60_000) {
-      w.start = now;
-      w.count = 0;
-    }
-    w.count += 1;
-    windows.set(key, w);
-    if (w.count > limit) {
-      return res.status(429).json({ error: 'Rate limit exceeded', limit, window: '1m' });
+    const { ratePerMin, requestsPerMonth } = TIER_LIMITS[rec.tier];
+
+    // per-minute rate limit (atomic, durable)
+    const rate = await store.hitRate(key, ratePerMin);
+    if (!rate.allowed) {
+      return res
+        .status(429)
+        .json({ error: 'Rate limit exceeded', limit: ratePerMin, window: '1m' });
     }
 
-    rec.requestCount += 1;
+    // monthly quota (atomic, auto-resetting 30-day window)
+    const quota = await store.consumeRequest(key, requestsPerMonth);
+    if (!quota.allowed) {
+      return res.status(429).json({
+        error: 'Monthly quota exceeded',
+        limit: requestsPerMonth,
+        window: '30d',
+        resetsAt: new Date(quota.resetsAt).toISOString(),
+      });
+    }
+
     req.apiKey = rec;
     next();
   };

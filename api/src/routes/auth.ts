@@ -3,7 +3,15 @@ import { recoverMessageAddress, type Hex } from 'viem';
 import { config } from '../lib/config.js';
 import { publicClient } from '../lib/viem.js';
 import { SUBSCRIPTION_ABI, TIER_NAMES } from '../lib/contracts.js';
-import { isSubscriptionActive, tierOf, requireApiKey, TIER_LIMITS, type AuthedRequest } from '../lib/auth.js';
+import {
+  isSubscriptionActive,
+  tierOf,
+  requireApiKey,
+  TIER_LIMITS,
+  TIER_CAPS,
+  namespaceCapFor,
+  type AuthedRequest,
+} from '../lib/auth.js';
 import { store } from '../lib/store.js';
 import { checkSlug, oemName } from '../lib/ens.js';
 
@@ -63,7 +71,7 @@ authRouter.post('/keys/wallet', async (req, res) => {
     return res.status(402).json({ error: 'Payment Required', detail: 'No active subscription' });
   }
   const tier = await tierOf(recovered);
-  const rec = store.issueKey(recovered, tier);
+  const rec = await store.issueKey(recovered, tier);
   res.json({ apiKey: rec.key, tier: rec.tier, subscriber: rec.subscriber });
 });
 
@@ -72,12 +80,12 @@ authRouter.post('/keys/wallet', async (req, res) => {
  * (public, used by the checkout UI as the OEM types). Returns the normalized
  * slug, whether it is valid + free, and the resulting fully-qualified name.
  */
-authRouter.get('/namespace/:slug', (req, res) => {
+authRouter.get('/namespace/:slug', async (req, res) => {
   const check = checkSlug(req.params.slug);
   if (!check.ok) {
     return res.json({ slug: check.slug, valid: false, available: false, reason: check.reason });
   }
-  const holder = store.subscriberForSlug(check.slug);
+  const holder = await store.subscriberForSlug(check.slug);
   res.json({
     slug: check.slug,
     valid: true,
@@ -111,10 +119,56 @@ authRouter.post('/namespace/reserve', async (req, res) => {
   const check = checkSlug(slug);
   if (!check.ok) return res.status(400).json({ error: 'invalid slug', reason: check.reason, slug: check.slug });
 
-  if (!store.reserveSlug(recovered, check.slug)) {
-    return res.status(409).json({ error: 'slug already reserved', slug: check.slug });
+  const cap = await namespaceCapFor(recovered);
+  const result = await store.reserveSlug(recovered, check.slug, cap);
+  if (!result.ok) {
+    if (result.reason === 'taken') {
+      return res.status(409).json({ error: 'slug already reserved', slug: check.slug });
+    }
+    return res.status(403).json({
+      error: 'Namespace cap reached',
+      detail: 'Upgrade your tier or release an existing namespace to reserve more.',
+      cap,
+      reserved: await store.slugsForSubscriber(recovered),
+    });
   }
-  res.json({ reserved: true, slug: check.slug, name: oemName(check.slug), subscriber: recovered });
+  res.json({
+    reserved: true,
+    slug: check.slug,
+    name: oemName(check.slug),
+    subscriber: recovered,
+    namespaces: await store.slugsForSubscriber(recovered),
+    cap,
+  });
+});
+
+/**
+ * POST /auth/namespace/release — SIWE-style: free a slug the wallet holds so a
+ * multi-namespace subscriber can swap brands (or give one up). Provisioned
+ * on-chain names are unaffected; this only frees the off-chain reservation.
+ */
+authRouter.post('/namespace/release', async (req, res) => {
+  const { address, message, signature, slug } = req.body ?? {};
+  if (!address || !message || !signature || !slug) {
+    return res.status(400).json({ error: 'address, message, signature, slug required' });
+  }
+  let recovered: Hex;
+  try {
+    recovered = await recoverMessageAddress({ message, signature });
+  } catch {
+    return res.status(400).json({ error: 'invalid signature' });
+  }
+  if (recovered.toLowerCase() !== String(address).toLowerCase()) {
+    return res.status(401).json({ error: 'signature does not match address' });
+  }
+
+  const check = checkSlug(slug);
+  if (!check.ok) return res.status(400).json({ error: 'invalid slug', reason: check.reason, slug: check.slug });
+
+  if (!(await store.releaseSlug(recovered, check.slug))) {
+    return res.status(404).json({ error: 'slug not held by this wallet', slug: check.slug });
+  }
+  res.json({ released: true, slug: check.slug, namespaces: await store.slugsForSubscriber(recovered) });
 });
 
 // GET /auth/keys/info (auth) — tier, limits, usage, expiry
@@ -127,11 +181,17 @@ authRouter.get('/keys/info', requireApiKey(), async (req: AuthedRequest, res) =>
     functionName: 'expiry',
     args: [rec.subscriber],
   });
+  const [namespaces, usage] = await Promise.all([
+    store.slugsForSubscriber(rec.subscriber),
+    store.getUsage(rec),
+  ]);
   res.json({
     subscriber: rec.subscriber,
     tier: rec.tier,
     limits: TIER_LIMITS[rec.tier],
-    usage: { requestCount: rec.requestCount },
+    caps: TIER_CAPS[rec.tier],
+    usage,
+    namespaces,
     expiry: Number(expiry),
     expiryISO: new Date(Number(expiry) * 1000).toISOString(),
   });
