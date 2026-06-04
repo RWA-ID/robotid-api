@@ -22,7 +22,7 @@ authRouter.get('/tiers', async (_req, res) => {
   const subscription = config.addresses.subscription;
   const tiers = await Promise.all(
     TIER_NAMES.map(async (name, i) => {
-      let priceUsdc = [5_000_000_000n, 7_500_000_000n, 12_500_000_000n][i];
+      let priceUsdc = [1_999_000_000n, 3_999_000_000n, 9_999_000_000n][i];
       if (subscription) {
         try {
           priceUsdc = await publicClient.readContract({

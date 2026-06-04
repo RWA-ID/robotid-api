@@ -219,9 +219,9 @@ API listeners and subgraph depend on them).
 
 | Tier | Price / mo | Requests / mo | Rate / min | Namespace |
 |---|---|---|---|---|
-| Small Manufacturer | $5,000 | 1,000,000 | 300 | ✓ `*.mfr` |
-| OEM | $7,500 | 5,000,000 | 1,000 | ✓ `*.mfr` + all adapters |
-| Enterprise | $12,500 | unlimited | 5,000 | ✓ + multi-chain + white-label |
+| Small Manufacturer | $1,999 | 1,000,000 | 300 | ✓ `*.mfr` |
+| OEM | $3,999 | 5,000,000 | 1,000 | ✓ `*.mfr` + all adapters |
+| Enterprise | $9,999 | unlimited | 5,000 | ✓ + multi-chain + white-label |
 
 `subscribe(tier)` pulls USDC via `transferFrom` (approve first), sets a 30-day expiry, and emits
 `Subscribed`. Renewal extends from `max(now, currentExpiry)`.

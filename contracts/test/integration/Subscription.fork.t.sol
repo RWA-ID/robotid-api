@@ -52,7 +52,7 @@ contract SubscriptionForkTest is Test {
         vm.stopPrank();
 
         assertTrue(sub.isActive(oem));
-        assertEq(IERC20(USDC).balanceOf(treasury), 7_500e6);
+        assertEq(IERC20(USDC).balanceOf(treasury), 3_999e6);
 
         // warp past 30 days → lapse
         vm.warp(block.timestamp + 31 days);
@@ -62,7 +62,7 @@ contract SubscriptionForkTest is Test {
         vm.prank(oem);
         sub.subscribe(Subscription.Tier.OEM);
         assertTrue(sub.isActive(oem));
-        assertEq(IERC20(USDC).balanceOf(treasury), 15_000e6);
+        assertEq(IERC20(USDC).balanceOf(treasury), 7_998e6);
     }
 
     function test_RevertWhen_NoAllowance() public {

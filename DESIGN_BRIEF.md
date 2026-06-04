@@ -77,7 +77,7 @@ the "machine-readable" feel.
    NFT holder). Show it as a clean hierarchy / wiring diagram.
 9. **Live contracts** — a table of the 6 mainnet contracts with Etherscan links (addresses are real
    and must stay accurate). Frame as "source-verified on mainnet, 53 tests passing."
-10. **Pricing** — three on-chain USDC tiers ($5,000 / $7,500 / $12,500 per month) with the
+10. **Pricing** — three on-chain USDC tiers ($1,999 / $3,999 / $9,999 per month) with the
     Reown-AppKit connect + subscribe flow. Make the middle (OEM) tier the hero.
 11. **Closing CTA + footer** — "Give your robots an identity that outlives your database." Footer:
     *Built on Ethereum · Powered by ENS · MIT Licensed · Crypto-native · No fiat rails.*

@@ -27,8 +27,8 @@ export const TIERS = [
   {
     idx: 0,
     name: 'Small Manufacturer',
-    priceUsd: 5000,
-    priceUsdc: 5_000_000_000n,
+    priceUsd: 1999,
+    priceUsdc: 1_999_000_000n,
     requests: '1,000,000 / mo',
     rate: '300 / min',
     specs: [
@@ -46,8 +46,8 @@ export const TIERS = [
   {
     idx: 1,
     name: 'OEM',
-    priceUsd: 7500,
-    priceUsdc: 7_500_000_000n,
+    priceUsd: 3999,
+    priceUsdc: 3_999_000_000n,
     requests: '5,000,000 / mo',
     rate: '1,000 / min',
     specs: [
@@ -65,8 +65,8 @@ export const TIERS = [
   {
     idx: 2,
     name: 'Enterprise',
-    priceUsd: 12500,
-    priceUsdc: 12_500_000_000n,
+    priceUsd: 9999,
+    priceUsdc: 9_999_000_000n,
     requests: 'Unlimited',
     rate: '5,000 / min',
     specs: [

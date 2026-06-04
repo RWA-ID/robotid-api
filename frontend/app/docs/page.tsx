@@ -134,8 +134,8 @@ POST /auth/namespace/reserve                // SIWE, free, at checkout
 
           <h2 id="subscriptions">Subscriptions</h2>
           <p>
-            Three tiers in USDC (6 decimals): Small Manufacturer <b>$5,000</b>, OEM <b>$7,500</b>,
-            Enterprise <b>$12,500</b>. <code>subscribe</code> pulls via <code>transferFrom</code>{' '}
+            Three tiers in USDC (6 decimals): Small Manufacturer <b>$1,999</b>, OEM <b>$3,999</b>,
+            Enterprise <b>$9,999</b>. <code>subscribe</code> pulls via <code>transferFrom</code>{' '}
             (approve first) and sets a 30-day expiry; renewal extends from{' '}
             <code>max(now, currentExpiry)</code>.
           </p>

@@ -20,14 +20,14 @@ contract SubscriptionTest is Test {
     }
 
     function test_DefaultPrices() public view {
-        assertEq(sub.price(Subscription.Tier.SmallManufacturer), 5_000e6);
-        assertEq(sub.price(Subscription.Tier.OEM), 7_500e6);
-        assertEq(sub.price(Subscription.Tier.Enterprise), 12_500e6);
+        assertEq(sub.price(Subscription.Tier.SmallManufacturer), 1_999e6);
+        assertEq(sub.price(Subscription.Tier.OEM), 3_999e6);
+        assertEq(sub.price(Subscription.Tier.Enterprise), 9_999e6);
     }
 
     function test_Subscribe() public {
         vm.startPrank(oem);
-        usdc.approve(address(sub), 7_500e6);
+        usdc.approve(address(sub), 3_999e6);
         vm.expectEmit(true, false, false, true);
         emit Subscription.Subscribed(oem, Subscription.Tier.OEM, block.timestamp + 30 days);
         sub.subscribe(Subscription.Tier.OEM);
@@ -36,7 +36,7 @@ contract SubscriptionTest is Test {
         assertTrue(sub.isActive(oem));
         assertEq(uint8(sub.tierOf(oem)), uint8(Subscription.Tier.OEM));
         assertEq(sub.expiry(oem), block.timestamp + 30 days);
-        assertEq(usdc.balanceOf(treasury), 7_500e6);
+        assertEq(usdc.balanceOf(treasury), 3_999e6);
     }
 
     function test_RevertWhen_InsufficientAllowance() public {
@@ -46,27 +46,27 @@ contract SubscriptionTest is Test {
     }
 
     function test_Expiry_LapsesAfter30Days() public {
-        _subscribe(Subscription.Tier.SmallManufacturer, 5_000e6);
+        _subscribe(Subscription.Tier.SmallManufacturer, 1_999e6);
         assertTrue(sub.isActive(oem));
         vm.warp(block.timestamp + 30 days);
         assertFalse(sub.isActive(oem)); // strict: < expiry
     }
 
     function test_Renew_ExtendsFromCurrentExpiry() public {
-        _subscribe(Subscription.Tier.OEM, 7_500e6);
+        _subscribe(Subscription.Tier.OEM, 3_999e6);
         uint256 firstExpiry = sub.expiry(oem);
 
         // renew before expiry → extends from current expiry
         vm.warp(block.timestamp + 10 days);
-        _subscribe(Subscription.Tier.OEM, 7_500e6);
+        _subscribe(Subscription.Tier.OEM, 3_999e6);
         assertEq(sub.expiry(oem), firstExpiry + 30 days);
     }
 
     function test_Renew_AfterExpiry_ExtendsFromNow() public {
-        _subscribe(Subscription.Tier.OEM, 7_500e6);
+        _subscribe(Subscription.Tier.OEM, 3_999e6);
         vm.warp(block.timestamp + 40 days); // lapsed
         assertFalse(sub.isActive(oem));
-        _subscribe(Subscription.Tier.OEM, 7_500e6);
+        _subscribe(Subscription.Tier.OEM, 3_999e6);
         assertEq(sub.expiry(oem), block.timestamp + 30 days);
         assertTrue(sub.isActive(oem));
     }
@@ -74,7 +74,7 @@ contract SubscriptionTest is Test {
     function test_SetPrice() public {
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
-        emit Subscription.PriceUpdated(Subscription.Tier.Enterprise, 12_500e6, 20_000e6);
+        emit Subscription.PriceUpdated(Subscription.Tier.Enterprise, 9_999e6, 20_000e6);
         sub.setPrice(Subscription.Tier.Enterprise, 20_000e6);
         assertEq(sub.price(Subscription.Tier.Enterprise), 20_000e6);
     }

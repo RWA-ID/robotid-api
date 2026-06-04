@@ -58,9 +58,9 @@ contract Subscription is Ownable, ReentrancyGuard {
         usdc = IERC20(_usdc);
         treasury = _treasury;
 
-        price[Tier.SmallManufacturer] = 5_000e6;
-        price[Tier.OEM] = 7_500e6;
-        price[Tier.Enterprise] = 12_500e6;
+        price[Tier.SmallManufacturer] = 1_999e6;
+        price[Tier.OEM] = 3_999e6;
+        price[Tier.Enterprise] = 9_999e6;
     }
 
     /**
