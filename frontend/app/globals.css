@@ -151,7 +151,23 @@ a { color: inherit; text-decoration: none; }
 .nav-links a:not(.btn) { font-family: var(--font-mono); font-size: 13px; color: var(--on-dark-soft); transition: color .15s; white-space: nowrap; }
 .nav-links a:not(.btn):hover { color: var(--on-dark); }
 .nav-cta { padding: 9px 16px !important; }
-.nav-burger { display: none; background: none; border: 1px solid var(--line-d); border-radius: 6px; color: var(--on-dark); width: 38px; height: 36px; cursor: pointer; }
+.nav-burger { display: none; background: none; border: 1px solid var(--line-d); border-radius: 6px; color: var(--on-dark); width: 38px; height: 36px; font-size: 17px; line-height: 1; cursor: pointer; }
+
+/* mobile dropdown (rendered only when the burger is toggled open) */
+.nav-mobile {
+  position: absolute; left: 0; right: 0; top: 100%; z-index: 59;
+  background: color-mix(in srgb, var(--graphite) 96%, transparent);
+  backdrop-filter: blur(12px) saturate(1.2);
+  border-bottom: 1px solid var(--line-d);
+  box-shadow: 0 24px 50px -24px rgba(0,0,0,0.8);
+}
+.nav-mobile-inner { display: flex; flex-direction: column; padding: 6px 0 16px; }
+.nav-mobile a:not(.btn) {
+  font-family: var(--font-mono); font-size: 14px; color: var(--on-dark-soft);
+  padding: 12px 2px; border-bottom: 1px solid var(--line-d2); transition: color .15s;
+}
+.nav-mobile a:not(.btn):hover { color: var(--on-dark); }
+.nav-mobile .btn { margin-top: 14px; justify-content: center; }
 
 /* =========================================================================
    DARK SECTION SHELL + BLUEPRINT GRID
@@ -225,8 +241,8 @@ a { color: inherit; text-decoration: none; }
 .plate-id { grid-column: 1 / -1; }
 .plate-id .lab { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--on-dark-faint); }
 .plate-id .val {
-  font-family: var(--font-mono); font-size: clamp(13px, 1.5vw, 16px); color: var(--on-dark);
-  margin-top: 6px; word-break: break-all; line-height: 1.45;
+  font-family: var(--font-mono); font-size: clamp(11px, 1.4vw, 15px); color: var(--on-dark);
+  margin-top: 6px; white-space: nowrap; letter-spacing: -0.01em; line-height: 1.45;
 }
 .plate-id .val b { color: var(--signal); font-weight: 600; }
 .etch { border-top: 1px dashed var(--line-d); margin: 4px 0 0; }
@@ -280,7 +296,7 @@ a { color: inherit; text-decoration: none; }
 
 /* holographic ID core: rotating rings around the floating credential */
 .core { position: relative; min-height: 540px; display: flex; align-items: center; justify-content: center; }
-.core .plate { width: 372px; max-width: 100%; }
+.core .plate { width: 416px; max-width: 100%; }
 .rings { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
 .ring { position: absolute; border-radius: 50%; }
 .r-radar { width: 520px; height: 520px;
@@ -620,9 +636,11 @@ a { color: inherit; text-decoration: none; }
   .tier.featured { transform: none; }
   .layer { grid-template-columns: 1fr; gap: 10px; }
   .layer .lmods { justify-content: flex-start; }
-  .plate-body { grid-template-columns: 1fr; }
+  .plate-body { grid-template-columns: 1fr; padding: 18px; gap: 16px; }
   .dm { justify-self: start; }
   .section { padding: 64px 0; }
+  .hero { padding: 52px 0 48px; }
+  .chip-orbit.c1 { left: 2px; top: 8px; } .chip-orbit.c2 { right: 2px; bottom: 40px; }
 }
 /* tweakable texture toggle */
 body.no-grid .blueprint::before { display: none; }

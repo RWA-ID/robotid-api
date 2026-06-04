@@ -7,12 +7,15 @@ const GOOGLE_SITE_VERIFICATION =
   process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? '5eat5gyOcLjDgjQuWQNl2UVRSPpWg-OTtjdwv9LXhQI';
 
 export const metadata: Metadata = {
-  title: 'robot-id.eth — One API for every robot on Earth',
+  title: {
+    default: 'Robot ID',
+    template: '%s · Robot ID',
+  },
   description:
     'The neutral ENS protocol layer for robots & autonomous machines. Identity, AI/voice intent, autonomous payments, capability attestation, and firmware verification — integrate once via a single API key.',
   metadataBase: new URL('https://robotid.tech'),
   openGraph: {
-    title: 'robot-id.eth — One API for every robot on Earth',
+    title: 'Robot ID — One API for every robot on Earth',
     description: 'The neutral ENS protocol layer for robots & autonomous machines.',
     url: 'https://robotid.tech',
     siteName: 'Robot ID',

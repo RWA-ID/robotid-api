@@ -1,7 +1,7 @@
 import { API_URL } from '@/lib/config';
 import { SiteNav } from '@/components/SiteNav';
 
-export const metadata = { title: 'Docs — robot-id.eth' };
+export const metadata = { title: 'Docs' };
 
 export default function Docs() {
   return (
