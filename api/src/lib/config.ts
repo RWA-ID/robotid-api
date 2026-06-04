@@ -16,6 +16,8 @@ export const config = {
   adminPrivateKey: process.env.ADMIN_PRIVATE_KEY as `0x${string}` | undefined,
   gatewaySignerKey: process.env.GATEWAY_SIGNER_KEY as `0x${string}` | undefined,
   pinataJwt: process.env.PINATA_JWT ?? '',
+  // HTTP gateway used to dereference a unit's ipfs:// tokenURI for text records.
+  ipfsGateway: (process.env.IPFS_GATEWAY ?? 'https://gateway.pinata.cloud/ipfs/').replace(/\/?$/, '/'),
   ensParent: process.env.ENS_PARENT ?? 'robot-id.eth',
   nameWrapper: (process.env.NAMEWRAPPER_ADDRESS ??
     '0xD4416b13d2b3a9aBae7AcD5D6C2BbDBE25686401') as `0x${string}`,
