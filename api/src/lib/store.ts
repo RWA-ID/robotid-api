@@ -29,6 +29,7 @@ export interface BatchRecord {
   capabilityClass: string;
   units: BatchUnit[];
   serials: string[]; // original serial strings (for proof-by-serial lookup)
+  uris?: string[]; // optional per-unit tokenURI (ipfs://CID), aligned with serials
   createdAt: number;
   rootCommitted: boolean;
 }

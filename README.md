@@ -174,9 +174,84 @@ robot-id.eth                                      ← protocol root (treasury, N
 
 - OEM subnames are **provisioned as a deliverable of an active subscription** — when `Subscribed`
   fires, the registrar creates `mfr.robot-id.eth` via NameWrapper.
-- Per-unit resolution runs through the **CCIP-Read gateway**, which reads `RobotIdentity.ownerOf` and
-  returns the current holder + IPFS profile. Slugs are normalized (lowercase, dash-separated) to
-  prevent identity squatting.
+- Per-unit resolution runs through the **CCIP-Read gateway**, which reads `RobotIdentity.ownerOf`
+  (the `addr` record) plus the unit's **text records** (spec data — see below). Slugs are normalized
+  (lowercase, dash-separated) to prevent identity squatting.
+
+---
+
+## 📇 Records: serial, build date, model & specs
+
+Every unit name resolves two kinds of data, gas-free, through the CCIP-Read gateway:
+
+- **`addr`** → the current NFT holder (`ownerOf`).
+- **`text(key)`** → spec records, merged from two sources:
+
+| Source | Trust | Mutability | Holds |
+|---|---|---|---|
+| On-chain `RobotData` struct | **Authoritative / tamper-proof** | registrar-only (`setTokenURI`/`setFirmwareVersion`) | manufacturer, model, capability class, firmware, serial **hash**, registration date, soulbound flag |
+| IPFS metadata JSON (`tokenURI`) | OEM-asserted | registrar can re-pin | build date, model number, weight, payload, avatar, datasheet links, arbitrary attributes |
+
+> The serial number itself is stored **only as `keccak256(serial)`** (privacy-preserving). A holder can
+> *prove* a serial; it is never exposed in plaintext on-chain or via records.
+
+### Canonical text-record keys
+
+| ENS text key | Source | Example value |
+|---|---|---|
+| `robot.manufacturer` | on-chain | `Boston Dynamics` |
+| `robot.model` | on-chain | `Spot` |
+| `robot.capability-class` | on-chain | `quadruped-inspection` |
+| `robot.firmware` | on-chain | `3` |
+| `robot.serial-hash` | on-chain | `0x9af2…` |
+| `robot.registered` | on-chain | `2026-06-04T18:22:01.000Z` (ISO) |
+| `robot.soulbound` | on-chain | `true` |
+| `robot.token-id` | on-chain | `1` |
+| `robot.build-date` | IPFS metadata | `2026-01-15` |
+| `robot.model-number` | IPFS metadata | `SPOT-EXPLORER-2` |
+| `avatar` · `url` · `description` | IPFS metadata | standard ENS keys, passed through |
+| `robot.<trait>` | IPFS `attributes[]` | any OpenSea-style trait, slugged |
+
+On-chain fields win on key conflicts. Any scalar field in the metadata JSON is also exposed under both
+its raw key and a `robot.`-prefixed alias. Unknown keys resolve to `""` (per ENSIP — never an error).
+
+### Resolve records on your platform
+
+Resolution is **standard ENS** — any ENSIP-10 + EIP-3668 (CCIP-Read) client works with no special SDK.
+
+**viem** (CCIP-Read on by default):
+```ts
+import { createPublicClient, http } from 'viem';
+import { mainnet } from 'viem/chains';
+
+const client = createPublicClient({ chain: mainnet, transport: http() });
+const name = 'sn-a1b2c3.boston-dynamics.robot-id.eth';
+
+const holder    = await client.getEnsAddress({ name });
+const model     = await client.getEnsText({ name, key: 'robot.model' });
+const buildDate = await client.getEnsText({ name, key: 'robot.build-date' });
+const firmware  = await client.getEnsText({ name, key: 'robot.firmware' });
+```
+
+**ethers v6** (follows CCIP-Read automatically):
+```ts
+import { JsonRpcProvider } from 'ethers';
+
+const provider = new JsonRpcProvider(process.env.RPC_URL);
+const resolver = await provider.getResolver('sn-a1b2c3.boston-dynamics.robot-id.eth');
+
+const holder = await resolver.getAddress();
+const model  = await resolver.getText('robot.model');
+```
+
+**No chain / quick lookups** — the gateway exposes read-only debug endpoints that return the same data:
+```bash
+curl https://<gateway>/resolve/sn-a1b2c3.boston-dynamics.robot-id.eth   # holder + tokenId + profile CID
+curl https://<gateway>/records/sn-a1b2c3.boston-dynamics.robot-id.eth   # full merged text-record map
+```
+
+Wallets and explorers (ENS app, Etherscan, Rainbow, …) display these text records automatically — no
+integration work needed on their side.
 
 ---
 
@@ -276,6 +351,90 @@ GET    /docs                                # Swagger UI
 
 **Error codes:** `401` missing/invalid key · `402` subscription inactive/expired · `429` rate
 limit · `404` not found.
+
+### Attaching records when minting
+
+The records resolved in [📇 Records](#-records-serial-build-date-model--specs) are written **at mint /
+claim time**. There is no separate "set record" call — you provide them with the unit.
+
+**The metadata JSON schema** (pinned to IPFS, referenced by `tokenURI`). On-chain struct fields are
+mirrored here for marketplaces; everything else is free-form and surfaces as `text` records:
+
+```json
+{
+  "manufacturer": "Boston Dynamics",
+  "model": "Spot",
+  "capabilityClass": "quadruped-inspection",
+  "firmwareVersion": 3,
+  "build-date": "2026-01-15",
+  "model-number": "SPOT-EXPLORER-2",
+  "avatar": "ipfs://bafy…/spot.png",
+  "description": "Inspection quadruped, unit A1B2C3",
+  "attributes": [
+    { "trait_type": "Payload kg", "value": 14 },
+    { "trait_type": "Ingress rating", "value": "IP54" }
+  ]
+}
+```
+
+**Single unit** — `POST /api/v1/robots`. Pass spec data in `profile`; the API pins
+`{ manufacturer, model, capabilityClass, firmwareVersion, ...profile }` to IPFS and bakes the CID into
+the unsigned `registerRobot` tx you sign:
+
+```jsonc
+{
+  "to": "0xUnitOwner…",
+  "serialNumber": "A1B2C3",          // hashed client→chain; never stored in plaintext
+  "manufacturer": "Boston Dynamics",
+  "model": "Spot",
+  "capabilityClass": "quadruped-inspection",
+  "firmwareVersion": 3,
+  "locked": true,                     // soulbound
+  "profile": {                        // → IPFS metadata → text records
+    "build-date": "2026-01-15",
+    "model-number": "SPOT-EXPLORER-2",
+    "attributes": [{ "trait_type": "Payload kg", "value": 14 }]
+  }
+}
+```
+
+**Batch (10K–100K)** — records attach in two layers:
+
+1. **Batch-level** fields (`manufacturer`, `model`, `capabilityClass`) are shared by every unit and
+   passed once to `POST /api/v1/robots/batch/preauthorize`.
+2. **Per-unit** spec sheets are supplied as a `tokenURI` (an `ipfs://CID` you pin) on each serial.
+   Inline pinning of 100K JSONs isn't feasible, so you pin them (Pinata, web3.storage, your own IPFS
+   node) and hand us the CIDs — the API threads each through the proof responses so the claim attaches
+   the right one. Omit it to ship units with only the shared on-chain fields.
+
+```jsonc
+// POST /api/v1/robots/batch/preauthorize
+{
+  "manufacturer": "Boston Dynamics",
+  "model": "Spot",
+  "capabilityClass": "quadruped-inspection",
+  "locked": true,
+  "serials": [
+    { "serialNumber": "A1B2C3", "owner": "0x…", "tokenURI": "ipfs://bafyUnit1…" },
+    { "serialNumber": "A1B2C4", "owner": "0x…", "tokenURI": "ipfs://bafyUnit2…" }
+  ]
+}
+```
+
+The returned `batchId` + `root` go on-chain via `MerkleBatchOracle.submitRoot`. Each unit then claims
+with `GET …/batch/:id/proof/:serial` — which now returns `manufacturer`, `model`, `capabilityClass`
+and `uri` alongside the `proof` — feeding straight into `claimWithProof` (or the relayer's
+`/sponsor/claim`).
+
+> **Trust note:** the Merkle leaf commits only `(serialHash, owner, locked)`. The spec strings and
+> `uri` are bound to the unit at claim time, not by the proof. For records that must be cryptographically
+> tied to the batch, mint via `registerRobot` (registrar-signed) instead of self-claim, or pin a
+> metadata CID whose hash you publish. **On-chain fields are always registrar-gated and tamper-proof;
+> IPFS metadata is OEM-asserted.**
+
+To update a record later: `setTokenURI(tokenId, newCID)` (re-pin the JSON) or `setFirmwareVersion`
+(monotonic) — both registrar-only. The gateway caches records for 60s, so updates appear within a
+minute.
 
 ---
 

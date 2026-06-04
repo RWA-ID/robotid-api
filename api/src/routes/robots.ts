@@ -125,6 +125,13 @@ robotsRouter.post('/batch/preauthorize', requireApiKey(), async (req: AuthedRequ
     locked: Boolean(locked),
   }));
 
+  // Optional per-unit spec sheet: the OEM supplies an ipfs://CID (or any URI)
+  // per serial. Threaded through the proof responses so the claim attaches the
+  // right tokenURI — which the CCIP gateway later surfaces as text records.
+  // Pinning 100K JSONs inline isn't feasible, so CIDs are prepared by the OEM.
+  const uris: string[] = serials.map((s: { tokenURI?: string; uri?: string }) => s.tokenURI ?? s.uri ?? '');
+  const hasUris = uris.some((u) => u !== '');
+
   const tree = buildTree(units);
   const nonce = BigInt(Date.now());
   const batchId = batchIdOf(oem, nonce);
@@ -132,6 +139,7 @@ robotsRouter.post('/batch/preauthorize', requireApiKey(), async (req: AuthedRequ
   const rec: BatchRecord = {
     batchId, oem, root: tree.root, manufacturer, model, capabilityClass,
     units, serials: serials.map((s: { serialNumber: string }) => s.serialNumber),
+    uris: hasUris ? uris : undefined,
     createdAt: Date.now(), rootCommitted: false,
   };
   await store.saveBatch(rec);
@@ -165,6 +173,9 @@ robotsRouter.get('/batch/:id/proof/:serial', async (req, res) => {
   res.json({
     batchId: batch.batchId, serial: req.params.serial, index: idx,
     leaf: tree.leaves[idx], proof: tree.proofOf(idx), unit: batch.units[idx],
+    // Claim args the unit (or relayer) passes to claimWithProof.
+    manufacturer: batch.manufacturer, model: batch.model,
+    capabilityClass: batch.capabilityClass, uri: batch.uris?.[idx] ?? '',
   });
 });
 
@@ -178,6 +189,7 @@ robotsRouter.get('/batch/:id/proofs', requireApiKey(), async (req, res) => {
   const start = page * size;
   const slice = batch.units.slice(start, start + size).map((u, i) => ({
     index: start + i, serial: batch.serials[start + i], leaf: tree.leaves[start + i], proof: tree.proofOf(start + i), unit: u,
+    uri: batch.uris?.[start + i] ?? '',
   }));
   res.json({ batchId: batch.batchId, page, size, total: batch.units.length, proofs: slice });
 });
