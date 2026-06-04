@@ -179,7 +179,14 @@ export default function Subscribe() {
               {tier === t.idx && <span className="badge">Selected</span>}
               <div className="tn">{t.name}</div>
               <div className="price">${t.priceUsd.toLocaleString()}<span> / mo</span></div>
-              <div className="meta">{t.requests} · {t.rate}</div>
+              <dl className="specs">
+                {t.specs.map((s) => (
+                  <div className="spec" key={s.k}>
+                    <dt>{s.k}</dt>
+                    <dd>{s.v}</dd>
+                  </div>
+                ))}
+              </dl>
             </button>
           ))}
         </div>
