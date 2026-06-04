@@ -16,6 +16,7 @@ export default function Docs() {
           <div className="grp">Concepts</div>
           <a href="#identity">Robot Identity</a>
           <a href="#namespaces">Namespaces</a>
+          <a href="#records">Records &amp; Resolution</a>
           <a href="#batches">Merkle Batches</a>
           <a href="#capability">Capability Registry</a>
           <a href="#intent">Intent Routing</a>
@@ -96,16 +97,79 @@ POST /auth/namespace/reserve                // SIWE, free, at checkout
 → { reserved:true, name:"boston-dynamics.robot-id.eth" }
 // consumed by the Subscribed watcher → provisioned on payment`}</code></pre>
 
+          <h2 id="records">Records &amp; Resolution</h2>
+          <p>
+            Every unit name resolves two kinds of data, gas-free, through the CCIP-Read gateway:
+            its <code>addr</code> record (the current NFT holder) and a set of{' '}
+            <code>text</code> records carrying the unit&rsquo;s spec data. Records merge two sources —
+            the authoritative on-chain <code>RobotData</code> struct and the IPFS metadata JSON behind{' '}
+            <code>tokenURI</code>. On-chain fields win on conflict; the serial number itself is stored
+            only as <code>keccak256(serial)</code> and is never exposed in plaintext.
+          </p>
+          <table className="ctable">
+            <thead>
+              <tr><th>ENS text key</th><th>Source</th><th>Example</th></tr>
+            </thead>
+            <tbody>
+              <tr><td><code>robot.manufacturer</code></td><td>on-chain</td><td>Boston Dynamics</td></tr>
+              <tr><td><code>robot.model</code></td><td>on-chain</td><td>Spot</td></tr>
+              <tr><td><code>robot.capability-class</code></td><td>on-chain</td><td>quadruped-inspection</td></tr>
+              <tr><td><code>robot.firmware</code></td><td>on-chain</td><td>3</td></tr>
+              <tr><td><code>robot.serial-hash</code></td><td>on-chain</td><td>0x9af2…</td></tr>
+              <tr><td><code>robot.registered</code></td><td>on-chain</td><td>2026-06-04T18:22:01Z</td></tr>
+              <tr><td><code>robot.soulbound</code></td><td>on-chain</td><td>true</td></tr>
+              <tr><td><code>robot.build-date</code></td><td>IPFS metadata</td><td>2026-01-15</td></tr>
+              <tr><td><code>robot.model-number</code></td><td>IPFS metadata</td><td>SPOT-EXPLORER-2</td></tr>
+              <tr><td><code>avatar · url · description</code></td><td>IPFS metadata</td><td>standard ENS keys</td></tr>
+              <tr><td><code>robot.&lt;trait&gt;</code></td><td>IPFS attributes[]</td><td>any OpenSea-style trait</td></tr>
+            </tbody>
+          </table>
+          <p>
+            Resolution is <b>standard ENS</b> (ENSIP-10 + EIP-3668) — any CCIP-Read-capable client
+            works with no custom SDK. Integrate it on your platform in a few lines:
+          </p>
+          <pre><code>{`// viem — CCIP-Read on by default
+import { createPublicClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+const client = createPublicClient({ chain: mainnet, transport: http() })
+const name = 'spot-0001.boston-dynamics.robot-id.eth'
+
+const holder    = await client.getEnsAddress({ name })
+const model     = await client.getEnsText({ name, key: 'robot.model' })
+const buildDate = await client.getEnsText({ name, key: 'robot.build-date' })
+
+// ethers v6 — follows CCIP-Read automatically
+const resolver = await provider.getResolver(name)
+const mfr = await resolver.getText('robot.manufacturer')`}</code></pre>
+          <p>
+            Unknown keys resolve to an empty string (never an error). Need a quick lookup without a
+            chain client? The gateway exposes read-only debug endpoints that return the same data:
+          </p>
+          <pre><code>{`GET /ccip/resolve/spot-0001.boston-dynamics.robot-id.eth   // holder
+GET /ccip/records/spot-0001.boston-dynamics.robot-id.eth   // full text-record map`}</code></pre>
+          <p>
+            Wallets and explorers (ENS app, Etherscan, Rainbow) display these text records
+            automatically — no work needed on their side.
+          </p>
+
           <h2 id="batches">Merkle Batches (OEM)</h2>
           <p>
             Pre-authorize up to <b>100,000 serials</b> off-chain: the API builds a Merkle tree, you
             commit the root via <code>MerkleBatchOracle.submitRoot</code>, and each unit later claims
-            its NFT with a proof via <code>claimWithProof(batchId, proof, …)</code>.
+            its NFT with a proof via <code>claimWithProof(batchId, proof, …)</code>. Records attach in
+            two layers — shared <code>manufacturer</code>/<code>model</code>/<code>capabilityClass</code>{' '}
+            passed once, plus an optional per-unit <code>tokenURI</code> (an <code>ipfs://CID</code> you
+            pin) for build date, model number and other spec fields. The proof endpoint echoes the
+            claim args back, so <code>claimWithProof</code> attaches the right metadata.
           </p>
           <pre><code>{`POST /api/v1/robots/batch/preauthorize
-{ "manufacturer":"Unitree", "model":"Go2",
-  "serials":[{"serialNumber":"GO2-0001","owner":"0x…"}] }
-→ { batchId, root, unsignedTx }   // sign submitRoot, then distribute proofs`}</code></pre>
+{ "manufacturer":"Unitree", "model":"Go2", "capabilityClass":"quadruped",
+  "serials":[{ "serialNumber":"GO2-0001", "owner":"0x…",
+               "tokenURI":"ipfs://bafy…" }] }       // per-unit spec sheet (optional)
+→ { batchId, root, unsignedTx }                     // sign submitRoot, then distribute proofs
+
+GET /api/v1/robots/batch/:id/proof/GO2-0001
+→ { proof, manufacturer, model, capabilityClass, uri }  // → claimWithProof`}</code></pre>
 
           <h2 id="capability">Capability Registry</h2>
           <p>
