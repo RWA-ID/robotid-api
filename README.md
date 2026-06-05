@@ -292,14 +292,27 @@ API listeners and subgraph depend on them).
 
 ### Subscription tiers (USDC, 6 decimals)
 
-| Tier | Price / mo | Requests / mo | Rate / min | Namespace |
-|---|---|---|---|---|
-| Small Manufacturer | $1,999 | 1,000,000 | 300 | ✓ `*.mfr` |
-| OEM | $3,999 | 5,000,000 | 1,000 | ✓ `*.mfr` + all adapters |
-| Enterprise | $9,999 | unlimited | 5,000 | ✓ + multi-chain + white-label |
+Three tiers, billed monthly in USDC. Resource caps (`units`, `namespaces`) and API limits
+(`requestsPerMonth`, `ratePerMin`) are **enforced at the API** — see `api/src/lib/auth.ts`
+(`TIER_CAPS`, `TIER_LIMITS`) — and mirrored on the [`/subscribe`](https://robotid-api-api.vercel.app/subscribe)
+matrix.
+
+| | **Small Manufacturer** | **OEM** | **Enterprise** |
+|---|---|---|---|
+| **Price / mo** | $1,999 | $3,999 | $9,999 |
+| **Robot identities** (lifetime units) | Up to 10,000 | Up to 250,000 | Unlimited |
+| **OEM namespaces** | 1 | Up to 5 brands | Unlimited |
+| **Batch pre-authorize** | 10k serials / batch | 100k serials / batch | Unlimited batches |
+| **Signing keys** | 1 | 5 · rotation | Unlimited · HSM |
+| **API requests** | 1M / mo · 300/min | 5M / mo · 1,000/min | Unlimited · 5,000/min |
+| **Intent adapters** | Basic | All adapters | All + custom |
+| **Chains** | Mainnet | Mainnet | Multi-chain |
+| **Support** | Community + email | Priority (24h) | Dedicated SLA |
 
 `subscribe(tier)` pulls USDC via `transferFrom` (approve first), sets a 30-day expiry, and emits
-`Subscribed`. Renewal extends from `max(now, currentExpiry)`.
+`Subscribed`. Renewal extends from `max(now, currentExpiry)`. Prices are adjustable on-chain via
+`setPrice(tier, amount)` (owner only) — the API and frontend read the live values, so a price change
+needs no redeploy.
 
 ### Merkle batch leaf encoding
 `RobotIdentity.claimWithProof` verifies against an OZ sorted-pair tree. Each leaf is:
