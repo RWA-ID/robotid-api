@@ -676,3 +676,53 @@ body.no-grid .blueprint::before { display: none; }
   .doc { grid-template-columns: 1fr; gap: 24px; }
   .doc nav { position: static; }
 }
+
+/* =========================================================================
+   FOOTER LINKS  ·  legal + contact
+   ========================================================================= */
+.footer .foot-links { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.04em; }
+.footer .foot-links a { color: var(--on-dark-soft); transition: color .15s; }
+.footer .foot-links a:hover { color: var(--signal); }
+
+/* =========================================================================
+   STANDALONE PAGE WRAP  ·  contact + legal headers
+   ========================================================================= */
+.legal-wrap { max-width: 720px; }
+.legal-wrap .sec-h { margin-top: 14px; }
+
+/* =========================================================================
+   CONTACT FORM
+   ========================================================================= */
+.cform { display: grid; gap: 18px; margin-top: 8px; }
+.cform-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.cform-field { display: grid; gap: 7px; }
+.cform-label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); font-weight: 500; }
+.cform-opt { text-transform: none; letter-spacing: 0; color: var(--ink-faint); opacity: 0.8; }
+.cform input,
+.cform textarea {
+  width: 100%; font-family: var(--font-sans); font-size: 15px; color: var(--ink);
+  background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+  padding: 12px 14px; transition: border-color .15s, box-shadow .15s;
+}
+.cform textarea { resize: vertical; min-height: 130px; line-height: 1.55; }
+.cform input::placeholder,
+.cform textarea::placeholder { color: var(--ink-faint); }
+.cform input:focus,
+.cform textarea:focus {
+  outline: none; border-color: var(--signal-deep);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--signal) 18%, transparent);
+}
+.cform-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.cform button[disabled] { opacity: 0.6; cursor: not-allowed; }
+.cform-status { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-soft); }
+.cform-status.is-ok { color: var(--ok); }
+.cform-status.is-error { color: var(--rej); }
+/* honeypot — visually + a11y hidden */
+.cform-hp { position: absolute !important; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.cform-alt { margin: 22px 0 0; padding-top: 18px; border-top: 1px solid var(--line-2); font-size: 14.5px; color: var(--ink-soft); }
+.cform-alt a { color: var(--signal-deep); border-bottom: 1px solid color-mix(in srgb, var(--signal-deep) 35%, transparent); }
+.cform-alt a:hover { color: var(--ink); border-color: var(--ink); }
+
+@media (max-width: 560px) {
+  .cform-row { grid-template-columns: 1fr; }
+}
