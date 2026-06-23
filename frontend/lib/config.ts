@@ -1,5 +1,8 @@
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? 1);
-export const REOWN_PROJECT_ID = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ?? '';
+// Canonical shared Reown/WalletConnect project ID, baked in as a default so the
+// dApp's wallet flow works out of the box; override via NEXT_PUBLIC_* if needed.
+export const REOWN_PROJECT_ID =
+  process.env.NEXT_PUBLIC_REOWN_PROJECT_ID ?? '43bdd1b8c477ac4d4a4264a14a8472f8';
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? 'https://robot-idapi-production.up.railway.app';
 

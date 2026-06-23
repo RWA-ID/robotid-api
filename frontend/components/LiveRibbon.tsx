@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, fallback, http } from 'viem';
 import { mainnet } from 'viem/chains';
 import { CONTRACTS } from '@/lib/config';
 import { ROBOT_IDENTITY_ABI } from '@/lib/contracts';
@@ -42,7 +42,16 @@ export function LiveRibbon() {
   useEffect(() => {
     const identity = CONTRACTS.robotIdentity;
     if (!identity || /^0x0+$/.test(identity)) return;
-    const client = createPublicClient({ chain: mainnet, transport: http() });
+    // viem's default mainnet RPC (eth.merkle.io) blocks browser CORS; use
+    // keyless, CORS-open public endpoints with a fallback for resilience.
+    const client = createPublicClient({
+      chain: mainnet,
+      transport: fallback([
+        http('https://cloudflare-eth.com'),
+        http('https://ethereum-rpc.publicnode.com'),
+        http('https://gateway.tenderly.co/public/mainnet'),
+      ]),
+    });
     client
       .readContract({
         address: identity as `0x${string}`,

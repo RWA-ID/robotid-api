@@ -144,6 +144,26 @@ export function IcReg() {
   );
 }
 
+export function IcLock() {
+  return (
+    <svg {...aIcoProps}>
+      <rect x="9" y="18" width="22" height="16" rx="2.5" />
+      <path d="M14 18 V13 a6 6 0 0 1 12 0 V18" />
+      <circle cx="20" cy="25" r="2" fill="currentColor" stroke="none" />
+      <path d="M20 27 V30" />
+    </svg>
+  );
+}
+export function IcAudit() {
+  return (
+    <svg {...aIcoProps}>
+      <rect x="8" y="5" width="20" height="30" rx="2.5" />
+      <path d="M13 12 H23 M13 17 H23 M13 22 H19" />
+      <path d="M22 27 L25 30 L31 23" />
+    </svg>
+  );
+}
+
 export function Arrow({ size = 14 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

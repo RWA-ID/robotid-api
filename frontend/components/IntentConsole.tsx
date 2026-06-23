@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Reveal, SecHead } from './Reveal';
 
 // streaming intent-log entries (signature animation)
 const INTENT_LOG: [string, 'ok' | 'rej', string, string, string, string][] = [
@@ -31,16 +32,14 @@ export function IntentConsole() {
   const shown = INTENT_LOG.slice(0, count);
 
   return (
-    <section className="section dark blueprint">
+    <section className="section blueprint" id="intent">
       <div className="wrap">
-        <div className="sec-tag"><span className="num">§ 05</span> Live audit log</div>
-        <h2 className="sec-h">ROS2 intent, authorized on-chain.</h2>
-        <p className="sec-lede">
-          Most robot OEMs run ROS2, so the lead adapter is <b className="amber">ros2-bridge</b>. Every
+        <SecHead num="§ 05" tag="Live audit log" h="ROS2 intent, authorized on-chain.">
+          Most robot OEMs run ROS2, so the lead adapter is <b className="sig">ros2-bridge</b>. Every
           command is classified, checked against the robot&rsquo;s AgentWallet limits, routed to a ROS2
           action goal, and recorded as an immutable audit entry — executed or rejected, with the reason.
-        </p>
-        <div className="console-wrap">
+        </SecHead>
+        <Reveal as="div" className="console-wrap">
           <aside className="console-rail">
             <div className="rl">ROS2 node graph</div>
             <div className="node"><span className="led led-ok" />/intent_listener</div>
@@ -75,7 +74,7 @@ export function IntentConsole() {
               <span className="cursor" />
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

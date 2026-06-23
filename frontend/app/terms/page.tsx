@@ -21,6 +21,7 @@ export default function Terms() {
               <a href="#payments">Subscriptions &amp; payments</a>
               <a href="#use">Acceptable use</a>
               <a href="#blockchain">Blockchain disclaimer</a>
+              <a href="#compliance">Compliance &amp; standards</a>
               <a href="#ip">Intellectual property</a>
               <a href="#thirdparty">Third-party services</a>
               <a href="#warranty">No warranty</a>
@@ -85,6 +86,22 @@ export default function Terms() {
                 forks, gas spikes, smart-contract bugs, and third-party outages may affect availability
                 and outcomes. You understand and accept these inherent risks of using on-chain
                 infrastructure.</p>
+
+              <h2 id="compliance">Compliance &amp; standards</h2>
+              <p>Robot&nbsp;ID is built on open, industry-standard rails — <b>ERC-721, ERC-5192,
+                ERC-2981, and ERC-4337</b> tokens and accounts, <b>ENS</b> naming with
+                <b> ENSIP-10</b> wildcard resolution over <b>EIP-3668 (CCIP-Read)</b>, and a
+                <b> ROS&nbsp;2</b> intent adapter — so there is no proprietary lock-in. The Service is
+                designed to <b>strengthen your compliance program</b>: the immutable IntentRouter audit
+                log, OEM-signed capability attestations, and firmware-signature verification produce
+                independently verifiable evidence that can support machinery-safety documentation,
+                cyber-resilience requirements for connected products, insurance underwriting, and audit.
+                These features are <b>tooling, not a certification</b>: Robot&nbsp;ID does not warrant
+                that your use satisfies any particular law, standard, or regulation (for example ISO
+                10218 / ISO/TS&nbsp;15066, the EU Machinery Regulation 2023/1230, the EU Cyber
+                Resilience Act, or the GDPR). You remain solely responsible for determining which
+                requirements apply to you, for the accuracy of the attestations and firmware records you
+                publish, and for achieving and maintaining conformity.</p>
 
               <h2 id="ip">Intellectual property</h2>
               <p>The Robot&nbsp;ID open-source code is provided under its published license (MIT) — your

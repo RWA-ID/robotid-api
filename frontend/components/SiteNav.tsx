@@ -9,9 +9,9 @@ const LINKS: [string, string][] = [
   ['/#why', 'Why'],
   ['/#protocol', 'Protocol'],
   ['/#modules', 'Modules'],
-  ['/docs', 'Docs'],
-  ['/#contracts', 'Contracts'],
+  ['/#compliance', 'Compliance'],
   ['/#pricing', 'Pricing'],
+  ['/docs', 'Docs'],
 ];
 
 /** Shared sticky control-room nav. Used on the landing hero, /subscribe, /docs.
